@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标书拆解 + 技术标生成器</title>
+<!-- PDF.js: 国内用 bootcdn，国外用 cdnjs 备用 -->
+<script src="https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(typeof pdfjsLib==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');}</script>
+<!-- Mammoth.js: jsdelivr 国内通常可用 -->
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script>if(typeof mammoth==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"><\/script>');}</script>
+<!-- docx.js -->
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<!-- FileSaver.js -->
+<script src="https://cdn.bootcdn.net/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>if(typeof saveAs==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"><\/script>');}</script>
+<style>
+/* ===================== Reset & Variables ===================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --primary: #2563eb;
+  --primary-h: #1d4ed8;
+  --primary-l: #eff6ff;
+  --text: #1e293b;
+  --t2: #64748b;
+  --t3: #94a3b8;
+  --bd: #e2e8f0;
+  --bd-l: #f1f5f9;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-m: 0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+  --radius: 10px;
+  --radius-s: 6px;
+  --success: #10b981;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --amber: #d97706;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "SF Mono", "Cascadia Code", "Consolas", monospace;
+  --max-w: 1100px;
+}
+
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ===================== Layout ===================== */
+.app { max-width: var(--max-w); margin: 0 auto; padding: 20px 24px 100px; }
+
+/* ===================== Header ===================== */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 16px; border: 1px solid var(--bd);
+}
+.header-l { display: flex; align-items: center; gap: 12px; }
+.header-logo {
+  width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #7c3aed);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1.3em; font-weight: 700;
+}
+.header h1 { font-size: 1.25em; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.header .subtitle { font-size: 0.78em; color: var(--t2); margin-top: -2px; }
+.header-r { display: flex; gap: 8px; }
+
+/* ===================== Buttons ===================== */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: 1px solid var(--bd); border-radius: var(--radius-s); cursor: pointer;
+  font-size: 0.88em; font-family: var(--font); font-weight: 500;
+  background: var(--card); color: var(--text); transition: all 0.15s;
+  white-space: nowrap; user-select: none;
+}
+.btn:hover { background: var(--bd-l); border-color: #cbd5e1; }
+.btn:active { transform: scale(0.98); }
+.btn-p {
+  background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600;
+}
+.btn-p:hover { background: var(--primary-h); border-color: var(--primary-h); }
+.btn-s {
+  padding: 4px 10px; font-size: 0.8em; border-radius: 4px;
+}
+.btn-o {
+  background: transparent; border-color: var(--primary); color: var(--primary);
+}
+.btn-o:hover { background: var(--primary-l); }
+.btn-w {
+  background: var(--danger); color: #fff; border-color: var(--danger);
+}
+.btn-w:hover { background: #dc2626; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+/* ===================== Cards ===================== */
+.card {
+  background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius);
+  padding: 20px 24px; margin-bottom: 14px; box-shadow: var(--shadow);
+}
+.card h2 {
+  font-size: 1.05em; font-weight: 700; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+}
+.card h3 { font-size: 0.92em; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+.card p { color: var(--t2); font-size: 0.85em; margin-bottom: 10px; }
+
+/* ===================== Settings Panel ===================== */
+.settings-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
+}
+.fc { display: flex; flex-direction: column; gap: 4px; }
+.fc label { font-size: 0.8em; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: 0.03em; }
+.fc input, .fc select {
+  padding: 8px 12px; border: 1px solid var(--bd); border-radius: var(--radius-s);
+  font-size: 0.92em; font-family: var(--font); background: var(--card); color: var(--text);
+  transition: border-color 0.15s;
+}
+.fc input:focus, .fc select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.fc input[type="range"] { padding: 0; accent-color: var(--primary); }
+.settings-hint {
+  font-size: 0.75em; color: var(--t3); margin-top: 10px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* ===================== Tab Navigation ===================== */
+.tabs {
+  display: flex; gap: 0; margin-bottom: 0; background: var(--card);
+  border: 1px solid var(--bd); border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.tab {
+  flex: 1; padding: 14px 16px; font-size: 0.88em; font-weight: 600;
+  cursor: pointer; text-align: center; border: none; background: transparent;
+  color: var(--t2); font-family: var(--font); transition: all 0.15s;
+  border-bottom: 3px solid transparent; position: relative;
+}
+.tab:hover { color: var(--text); background: var(--bd-l); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--primary-l); }
+.tab .step-num {
+  display: inline-block; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bd); color: var(--t2); font-size: 0.78em; line-height: 22px;
+  margin-right: 6px; font-weight: 700;
+}
+.tab.active .step-num { background: var(--primary); color: #fff; }
+.tab.done .step-num { background: var(--success); color: #fff; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.tab-body {
+  background: var(--card); border: 1px solid var(--bd); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius); padding: 20px 24px;
+  box-shadow: var(--shadow);
+}
+
+/* ===================== Upload Zone ===================== */
+.upload-zone {
+  border: 2px dashed var(--bd); border-radius: var(--radius); padding: 40px;
+  text-align: center; cursor: pointer; transition: all 0.2s; color: var(--t2);
+  background: var(--bd-l);
+}
+.upload-zone:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-l); }
+.upload-zone.drag-over { border-color: var(--primary); background: var(--primary-l); transform: scale(1.01); }
+.upload-icon { font-size: 2.5em; margin-bottom: 12px; }
+.upload-zone .btn { margin: 0 6px; }
+
+/* ===================== Text Preview ===================== */
+.text-preview {
+  max-height: 280px; overflow-y: auto; background: #f8fafc; border: 1px solid var(--bd);
+  border-radius: var(--radius-s); padding: 14px; font-family: var(--mono);
+  font-size: 0.82em; line-height: 1.7; white-space: pre-wrap; word-break: break-all;
+  color: var(--text); margin-top: 10px;
+}
+
+/* ===================== Result Content ===================== */
+.result-content {
+  font-size: 0.9em; line-height: 1.8;
+}
+.result-content h2 { font-size: 1.1em; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
+.result-content h3 { font-size: 0.95em; margin: 14px 0 8px; color: var(--primary); }
+.result-content h4 { font-size: 0.88em; margin: 10px 0 6px; }
+.result-content table {
+  width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.82em;
+}
+.result-content table th, .result-content table td {
+  border: 1px solid var(--bd); padding: 8px 10px; text-align: left; vertical-align: top;
+}
+.result-content table th { background: var(--bd-l); font-weight: 600; white-space: nowrap; }
+.result-content table tr:hover td { background: #fafbfc; }
+.result-content ul, .result-content ol { padding-left: 24px; margin: 8px 0; }
+.result-content li { margin: 3px 0; }
+.result-content strong { color: #0f172a; }
+.result-content code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 3px; font-family: var(--mono); font-size: 0.85em;
+}
+.result-content pre {
+  background: #1e293b; color: #e2e8f0; padding: 14px; border-radius: var(--radius-s);
+  overflow-x: auto; font-size: 0.82em; line-height: 1.6; margin: 10px 0;
+}
+.result-content pre code { background: none; color: inherit; padding: 0; }
+.result-content blockquote {
+  border-left: 3px solid var(--primary); padding: 8px 14px; margin: 12px 0;
+  background: var(--primary-l); border-radius: 0 var(--radius-s) var(--radius-s) 0;
+}
+.result-content hr { border: none; border-top: 1px solid var(--bd); margin: 20px 0; }
+.result-content input[type="checkbox"] { margin-right: 6px; accent-color: var(--primary); transform: scale(1.1); }
+
+/* ===================== Progress ===================== */
+.progress-wrap { margin: 10px 0; }
+.progress-bar {
+  width: 100%; height: 6px; background: var(--bd-l); border-radius: 3px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--primary), #7c3aed);
+  border-radius: 3px; transition: width 0.3s ease; width: 0%;
+}
+.progress-text { font-size: 0.82em; color: var(--t2); margin-top: 6px; }
+
+/* ===================== Token Bar ===================== */
+.token-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
+  border-top: 1px solid var(--bd); padding: 10px 24px; display: flex;
+  justify-content: center; gap: 32px; font-size: 0.82em; color: var(--t2);
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.04); z-index: 100;
+}
+.token-bar b { color: var(--text); font-weight: 700; }
+.token-bar .live { color: var(--success); }
+.token-bar .live::before { content: "● "; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ===================== Toast ===================== */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 12px 20px; border-radius: var(--radius-s); font-size: 0.86em; font-weight: 500;
+  box-shadow: var(--shadow-m); max-width: 400px; animation: slideIn 0.25s ease;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.toast-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.toast-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.toast-info { background: var(--primary-l); color: #1e40af; border: 1px solid #bfdbfe; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ===================== Section Selector (Step 4) ===================== */
+.section-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin: 10px 0; }
+.section-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border: 1px solid var(--bd); border-radius: var(--radius-s); cursor: pointer;
+  transition: all 0.15s; font-size: 0.88em;
+}
+.section-item:hover { border-color: var(--primary); background: var(--primary-l); }
+.section-item.selected { border-color: var(--primary); background: var(--primary-l); }
+.section-item input[type="checkbox"] { accent-color: var(--primary); }
+.section-item .s-name { flex: 1; font-weight: 500; }
+.section-item .s-status { font-size: 0.78em; color: var(--t3); }
+.section-item .s-status.done { color: var(--success); font-weight: 600; }
+.section-item .s-status.generating { color: var(--primary); }
+
+/* ===================== Footer ===================== */
+.footer {
+  text-align: center; font-size: 0.75em; color: var(--t3); margin-top: 40px; padding-bottom: 60px;
+}
+
+/* ===================== Misc ===================== */
+.fr { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.mt-sm { margin-top: 8px; }
+.mt-md { margin-top: 16px; }
+.mb-sm { margin-bottom: 8px; }
+.text-sm { font-size: 0.82em; }
+.text-xs { font-size: 0.75em; }
+.color-t2 { color: var(--t2); }
+.fw-600 { font-weight: 600; }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78em; font-weight: 600;
+}
+.tag-red { background: #fef2f2; color: #991b1b; }
+.tag-yellow { background: #fffbeb; color: #92400e; }
+.tag-green { background: #ecfdf5; color: #065f46; }
+.tag-blue { background: var(--primary-l); color: #1e40af; }
+
+/* ===================== Responsive ===================== */
+@media (max-width: 768px) {
+  .app { padding: 12px 10px 90px; }
+  .header { flex-direction: column; gap: 10px; text-align: center; }
+  .header-r { justify-content: center; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .tabs { overflow-x: auto; }
+  .tab { padding: 10px 12px; font-size: 0.78em; white-space: nowrap; }
+  .tab-body { padding: 14px; }
+  .section-list { grid-template-columns: 1fr; }
+  .token-bar { gap: 12px; font-size: 0.72em; }
+  .card { padding: 14px 16px; }
+}
+@media (max-width: 480px) {
+  .header h1 { font-size: 1em; }
+  .tab { font-size: 0.7em; padding: 8px 6px; }
+  .tab .step-num { width: 18px; height: 18px; font-size: 0.7em; line-height: 18px; }
+}
+</style>
+</head>
+<body>
+<!-- ==================== Activation Overlay ==================== -->
+<div id="activationOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:3em;margin-bottom:8px">🔐</div>
+    <h2 style="font-size:1.3em;font-weight:700;margin-bottom:6px;color:#1e293b">标书拆解 + 技术标生成器</h2>
+    <p style="color:#64748b;font-size:0.88em;margin-bottom:24px">专业版 · ¥39.9/月 / 基础版 · ¥19.9/月<br>填入激活码即可使用</p>
+    <input type="text" id="actCode" placeholder="粘贴激活码（格式: XXXX-XXXX-XXXX-...）" style="width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9em;font-family:monospace;text-align:center;letter-spacing:0.05em;outline:none;transition:border-color 0.2s" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'" onkeydown="if(event.key==='Enter')activate()">
+    <button class="btn btn-p" onclick="activate()" style="width:100%;margin-top:12px;padding:12px;font-size:1em">🚀 激 活</button>
+    <div id="actError" style="color:#ef4444;font-size:0.82em;margin-top:8px;min-height:20px"></div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:0.78em;color:#94a3b8;line-height:1.8">
+      闲鱼搜索「标书拆解+技术标生成器」购买激活码<br>
+      或联系卖家微信获取
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-l">
+      <div class="header-logo">📋</div>
+      <div>
+        <h1>标书拆解 + 技术标生成器 <span id="versionBadge" style="font-size:0.55em;padding:2px 8px;border-radius:4px;font-weight:600;vertical-align:middle"></span></h1>
+        <div class="subtitle">上传招标文件 → AI 解析 → 材料清单 → 技术标大纲 → 逐节生成标书全文</div>
+      </div>
+    </div>
+    <div class="header-r">
+      <button class="btn" onclick="toggleSettings()" id="btnSettings">⚙️ 设置</button>
+      <button class="btn btn-o" onclick="saveToHistory()">💾 保存</button>
+      <button class="btn btn-p" onclick="exportWord()" id="btnExport" disabled>📥 导出 Word</button>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="card" id="settingsPanel" style="display:none">
+    <h2>⚙️ API 设置</h2>
+    <div class="settings-grid">
+      <div class="fc" style="grid-column: 1 / -1">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-..." onchange="saveSettings()">
+      </div>
+      <div class="fc">
+        <label>服务商</label>
+        <select id="apiProvider" onchange="onProviderChange()">
+          <option value="deepseek">DeepSeek（推荐·性价比最高）</option>
+          <option value="doubao">豆包（火山引擎）</option>
+          <option value="qwen">通义千问（阿里云）</option>
+          <option value="kimi">Kimi（月之暗面）</option>
+          <option value="custom">自定义端点</option>
+        </select>
+      </div>
+      <div class="fc">
+        <label>API 端点</label>
+        <input type="text" id="apiEndpoint" value="https://api.deepseek.com/v1" onchange="saveSettings()">
+      </div>
+      <div class="fc">
+        <label>模型名称</label>
+        <input type="text" id="modelName" value="deepseek-chat" onchange="saveSettings()">
+      </div>
+      <div class="fc">
+        <label>温度 (Temperature) <span id="tempLabel">0.3</span></label>
+        <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.3" oninput="document.getElementById('tempLabel').textContent=this.value;saveSettings()">
+      </div>
+    </div>
+    <div class="settings-hint mt-sm">🔒 API Key 仅存储在浏览器 localStorage，发送到您指定的 API 端点，不上传任何第三方服务器。</div>
+    <div class="settings-hint" style="margin-top:4px">💡 推荐使用 DeepSeek：中文理解最好，价格最低（输入 ¥1/百万token，输出 ¥2/百万token），一次标书拆解成本约 ¥0.06。</div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tabs" id="tabNav">
+    <button class="tab active" data-step="1" onclick="switchTab(1)">
+      <span class="step-num">1</span>招标解析
+    </button>
+    <button class="tab" data-step="2" onclick="switchTab(2)">
+      <span class="step-num">2</span>材料清单
+    </button>
+    <button class="tab" data-step="3" onclick="switchTab(3)">
+      <span class="step-num">3</span>技术标大纲
+    </button>
+    <button class="tab" data-step="4" onclick="switchTab(4)">
+      <span class="step-num">4</span>技术标生成
+    </button>
+  </div>
+
+  <!-- ==================== Tab 1: 招标解析 ==================== -->
+  <div class="tab-content active" id="tab1">
+    <div class="tab-body">
+      <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:16px">
+        <h2>📄 上传招标文件</h2>
+        <div id="apiNotice" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:var(--radius-s);padding:10px 16px;margin-bottom:14px;font-size:0.85em;display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.2em">⚠️</span>
+          <span style="flex:1"><b>请先配置 API Key</b> — 点击右上角「⚙️ 设置」填入 DeepSeek/豆包/通义 的 API Key，否则只能预览文档，无法 AI 解析。<br><small style="color:var(--t3)">没有 Key？去 <a href="https://platform.deepseek.com" target="_blank" style="color:var(--primary)">platform.deepseek.com</a> 注册，充10块能用几百次。</small></span>
+          <button class="btn btn-p btn-s" onclick="toggleSettings()">去设置 →</button>
+        </div>
+        <div class="upload-zone" id="dropZone"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleDrop(event)"
+             onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📁</div>
+          <div style="font-weight:600;margin-bottom:4px">拖拽文件到这里，或点击选择文件</div>
+          <div style="color:var(--t3);font-size:0.82em">支持 PDF / DOCX / TXT，最大 50MB</div>
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt" style="display:none" onchange="handleFile(this.files[0])">
+        </div>
+        <div id="parseStatus" style="display:none;margin-top:12px">
+          <div class="progress-wrap">
+            <div class="progress-text" id="parseStatusText">正在解析文档...</div>
+            <div class="progress-bar"><div class="progress-fill" id="parseProgressBar"></div></div>
+          </div>
+        </div>
+        <div id="libError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius-s);padding:10px 16px;margin-top:12px;font-size:0.85em;color:#991b1b"></div>
+        <div id="docInfo" style="display:none;margin-top:12px" class="fr">
+          <span class="tag tag-green" id="docInfoText"></span>
+          <span class="text-sm color-t2" id="docCharCount"></span>
+        </div>
+      </div>
+
+      <div id="extractSection" style="display:none">
+        <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:16px">
+          <h2>📋 文档预览</h2>
+          <div class="text-preview" id="textPreview"></div>
+          <div class="fr mt-sm">
+            <button class="btn btn-p" onclick="runStep1()" id="btnStep1">🚀 AI 智能解析招标文件</button>
+            <button class="btn" onclick="editDocText()">✏️ 编辑/裁剪文本</button>
+          </div>
+        </div>
+
+        <div id="step1Progress" style="display:none" class="card">
+          <div class="progress-wrap">
+            <div class="progress-text" id="step1Status"><span class="live"></span> AI 正在分析招标文件...</div>
+            <div class="progress-bar"><div class="progress-fill" id="step1ProgressBar"></div></div>
+          </div>
+        </div>
+
+        <div id="step1Result" style="display:none" class="card">
+          <h2>📊 解析结果</h2>
+          <div class="result-content" id="step1Output"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Tab 2: 材料清单 ==================== -->
+  <div class="tab-content" id="tab2">
+    <div class="tab-body">
+      <div id="step2Locked" class="card" style="text-align:center;padding:60px 20px">
+        <div style="font-size:3em;margin-bottom:12px">🔒</div>
+        <h2 style="justify-content:center">请先完成第1步「招标解析」</h2>
+        <p>生成招标解析结果后，才能自动提取材料清单</p>
+        <button class="btn btn-p" onclick="switchTab(1)">← 返回第1步</button>
+      </div>
+      <div id="step2Content" style="display:none">
+        <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:16px">
+          <h2>📋 投标材料清单</h2>
+          <p>基于招标解析结果，逐人逐证逐项列出所有需要准备的材料，标注重要级别</p>
+          <button class="btn btn-p" onclick="runStep2()" id="btnStep2">🚀 生成材料清单</button>
+        </div>
+        <div id="step2Progress" style="display:none" class="card">
+          <div class="progress-wrap">
+            <div class="progress-text"><span class="live"></span> AI 正在生成材料清单...</div>
+            <div class="progress-bar"><div class="progress-fill" id="step2ProgressBar"></div></div>
+          </div>
+        </div>
+        <div id="step2Result" style="display:none" class="card">
+          <h2>📋 材料清单结果</h2>
+          <div class="result-content" id="step2Output"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Tab 3: 技术标大纲 ==================== -->
+  <div class="tab-content" id="tab3">
+    <div class="tab-body">
+      <div id="step3Locked" class="card" style="text-align:center;padding:60px 20px">
+        <div style="font-size:3em;margin-bottom:12px">🔒</div>
+        <h2 style="justify-content:center">请先完成第2步「材料清单」</h2>
+        <p>需要招标解析 + 材料清单结果，才能生成精准的技术标大纲</p>
+        <button class="btn btn-p" onclick="switchTab(2)">← 返回第2步</button>
+      </div>
+      <div id="step3Content" style="display:none">
+        <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:16px">
+          <h2>📑 技术标大纲及得分要点</h2>
+          <p>对标招标文件评分标准，逐章标注得分点、配图建议和篇幅指引</p>
+          <button class="btn btn-p" onclick="runStep3()" id="btnStep3">🚀 生成技术标大纲</button>
+        </div>
+        <div id="step3Progress" style="display:none" class="card">
+          <div class="progress-wrap">
+            <div class="progress-text"><span class="live"></span> AI 正在生成技术标大纲...</div>
+            <div class="progress-bar"><div class="progress-fill" id="step3ProgressBar"></div></div>
+          </div>
+        </div>
+        <div id="step3Result" style="display:none" class="card">
+          <h2>📑 大纲结果</h2>
+          <div class="result-content" id="step3Output"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Tab 4: 技术标生成 ==================== -->
+  <div class="tab-content" id="tab4">
+    <div class="tab-body">
+      <div id="step4Locked" class="card" style="text-align:center;padding:60px 20px">
+        <div style="font-size:3em;margin-bottom:12px">🔒</div>
+        <h2 style="justify-content:center">请先完成第3步「技术标大纲」</h2>
+        <p>需要先拿到技术标大纲，再逐节生成详细内容</p>
+        <button class="btn btn-p" onclick="switchTab(3)">← 返回第3步</button>
+      </div>
+      <div id="step4Content" style="display:none">
+        <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:16px">
+          <h2>📝 章节生成器</h2>
+          <p>选择需要生成的技术标章节，AI 逐节编写详细内容。每节独立调用，可单独重新生成或编辑。</p>
+          <div id="sectionSelector" class="section-list"></div>
+          <div class="fr mt-sm">
+            <button class="btn btn-p" onclick="runStep4()" id="btnStep4">🚀 逐节生成技术标</button>
+            <button class="btn" onclick="toggleAllSections(true)">全选</button>
+            <button class="btn" onclick="toggleAllSections(false)">全不选</button>
+          </div>
+        </div>
+        <div id="step4Progress" style="display:none" class="card">
+          <div class="progress-wrap">
+            <div class="progress-text" id="step4ProgText"><span class="live"></span> 准备生成...</div>
+            <div class="progress-bar"><div class="progress-fill" id="step4ProgBar"></div></div>
+          </div>
+        </div>
+        <div id="step4Result" style="display:none" class="card">
+          <h2>📝 生成结果</h2>
+          <div id="step4ResultInner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Token Stats Bar -->
+  <div class="token-bar" id="tokenBar">
+    <span>已用 Token: <b id="totalTokens">0</b></span>
+    <span>预估费用: <b id="totalCost">¥0.00</b></span>
+    <span>当前步骤: <b id="currentStep">等待开始</b></span>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    标书拆解 + 技术标生成器 v1.0 &nbsp;|&nbsp; AI 辅助提效工具 &nbsp;|&nbsp; 数据仅存储于本地浏览器
+  </div>
+</div>
+
+<script>
+// ===================================================================
+// 标书拆解 + 技术标生成器 — 核心 JavaScript
+// ===================================================================
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ==================== Library Check ====================
+function checkLibs() {
+  const missing = [];
+  if (typeof pdfjsLib === 'undefined') missing.push('PDF.js (PDF解析)');
+  if (typeof mammoth === 'undefined') missing.push('Mammoth.js (DOCX解析)');
+  if (missing.length > 0) {
+    D('libError').style.display = 'block';
+    D('libError').innerHTML = '❌ 组件加载失败：' + missing.join('、') + '<br><small>请检查网络连接后刷新页面。如在国内访问不稳定，可能需要 VPN。</small>';
+    return false;
+  }
+  D('libError').style.display = 'none';
+  return true;
+}
+
+// ==================== State ====================
+const STATE_KEY = 'bid_tool_state';
+const HIST_KEY = 'bid_tool_history';
+
+const D = (id) => document.getElementById(id);
+
+function initState() {
+  const saved = localStorage.getItem(STATE_KEY);
+  if (saved) {
+    try { return JSON.parse(saved); } catch(e) {}
+  }
+  return {
+    docText: '', docType: '', docName: '', docSize: 0,
+    step1Result: '', step1Tokens: 0, step1Done: false,
+    step2Result: '', step2Tokens: 0, step2Done: false,
+    step3Result: '', step3Tokens: 0, step3Done: false,
+    outlineSections: [], sectionContents: {}, step4Done: false,
+    totalTokens: 0, totalCost: 0
+  };
+}
+
+let S = initState();
+
+function saveState() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(S));
+  updateTokenBar();
+}
+
+// ==================== Settings ====================
+const ENDPOINTS = {
+  deepseek:  { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  doubao:    { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-20240601-xxx' },
+  qwen:      { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  kimi:      { url: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-128k' },
+  custom:    { url: '', model: '' }
+};
+
+function loadSettings() {
+  const provider = localStorage.getItem('bid_provider') || 'deepseek';
+  const endpoint = localStorage.getItem('bid_endpoint') || ENDPOINTS.deepseek.url;
+  const model = localStorage.getItem('bid_model') || ENDPOINTS.deepseek.model;
+  const apiKey = localStorage.getItem('bid_apikey') || '';
+  const temp = localStorage.getItem('bid_temp') || '0.3';
+
+  D('apiProvider').value = provider;
+  D('apiEndpoint').value = endpoint;
+  D('modelName').value = model;
+  D('apiKey').value = apiKey;
+  D('temperature').value = temp;
+  D('tempLabel').textContent = temp;
+}
+
+function saveSettings() {
+  localStorage.setItem('bid_provider', D('apiProvider').value);
+  localStorage.setItem('bid_endpoint', D('apiEndpoint').value);
+  localStorage.setItem('bid_model', D('modelName').value);
+  localStorage.setItem('bid_apikey', D('apiKey').value);
+  localStorage.setItem('bid_temp', D('temperature').value);
+  // Hide API notice when key is saved
+  const hasKey = D('apiKey').value.trim();
+  D('apiNotice').style.display = hasKey ? 'none' : 'flex';
+}
+
+function onProviderChange() {
+  const p = D('apiProvider').value;
+  const cfg = ENDPOINTS[p];
+  if (cfg && p !== 'custom') {
+    D('apiEndpoint').value = cfg.url;
+    D('modelName').value = cfg.model;
+  }
+  saveSettings();
+}
+
+function toggleSettings() {
+  const panel = D('settingsPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  D('btnSettings').textContent = show ? '⚙️ 收起设置' : '⚙️ 设置';
+}
+
+// ==================== Toast ====================
+function toast(msg, type) {
+  type = type || 'info';
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.innerHTML = icons[type] + ' ' + msg;
+  D('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ==================== Tab Switching ====================
+function switchTab(n) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  document.querySelector(`.tab[data-step="${n}"]`).classList.add('active');
+  D('tab' + n).classList.add('active');
+
+  // Check tab access
+  if (n === 2 && !S.step1Done) {
+    D('step2Locked').style.display = 'block';
+    D('step2Content').style.display = 'none';
+  } else if (n === 2 && S.step1Done) {
+    D('step2Locked').style.display = 'none';
+    D('step2Content').style.display = 'block';
+  }
+  if (n === 3 && !S.step2Done) {
+    D('step3Locked').style.display = 'block';
+    D('step3Content').style.display = 'none';
+  } else if (n === 3 && S.step2Done) {
+    D('step3Locked').style.display = 'none';
+    D('step3Content').style.display = 'block';
+  }
+  if (n === 4 && !S.step3Done) {
+    D('step4Locked').style.display = 'block';
+    D('step4Content').style.display = 'none';
+  } else if (n === 4 && S.step3Done) {
+    D('step4Locked').style.display = 'none';
+    D('step4Content').style.display = 'block';
+    if (S.step3Done && S.outlineSections.length === 0) parseOutlineSections();
+    renderSectionSelector();
+  }
+}
+
+function updateTabState(step) {
+  const tab = document.querySelector(`.tab[data-step="${step}"]`);
+  switch(step) {
+    case 1: if (S.step1Done) tab.classList.add('done'); break;
+    case 2: if (S.step2Done) tab.classList.add('done'); break;
+    case 3: if (S.step3Done) tab.classList.add('done'); break;
+    case 4: if (S.step4Done) tab.classList.add('done'); break;
+  }
+  // Enable export when at least step1 is done
+  D('btnExport').disabled = !S.step1Done;
+}
+
+// ==================== Token Bar ====================
+function updateTokenBar() {
+  D('totalTokens').textContent = S.totalTokens.toLocaleString();
+  D('totalCost').textContent = '¥' + S.totalCost.toFixed(2);
+}
+
+function setCurrentStep(label) {
+  D('currentStep').textContent = label;
+}
+
+// ==================== Token Estimation ====================
+function estimateTokens(text) {
+  if (!text) return 0;
+  const chinese = (text.match(/[一-鿿　-〿＀-￯]/g) || []).length;
+  const other = text.length - chinese;
+  return Math.ceil(chinese * 1.5 + other * 0.3);
+}
+
+const PRICING = {
+  'deepseek-chat': { input: 1, output: 2 },    // ¥/1M tokens
+  'moonshot-v1-128k': { input: 12, output: 12 },
+  'qwen-plus': { input: 2, output: 6 },
+  'default': { input: 4, output: 8 }
+};
+
+function calcCost(model, inTokens, outTokens) {
+  const p = PRICING[model] || PRICING['default'];
+  return (inTokens * p.input + outTokens * p.output) / 1000000;
+}
+
+// ==================== Document Parsing ====================
+async function handleFile(file) {
+  if (!file) return;
+  if (!checkLibs()) return;
+  if (file.size > 50 * 1024 * 1024) { toast('文件超过50MB，请压缩或拆分后再上传', 'warning'); return; }
+
+  S.docName = file.name.replace(/\.[^.]+$/, '');
+  S.docSize = file.size;
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  D('parseStatus').style.display = 'block';
+  D('parseStatusText').textContent = '正在解析文档...';
+  D('parseProgressBar').style.width = '10%';
+
+  try {
+    let text = '';
+    if (ext === 'pdf') {
+      text = await parsePDF(file);
+    } else if (ext === 'docx') {
+      text = await parseDOCX(file);
+    } else if (ext === 'txt') {
+      text = await parseTXT(file);
+    } else {
+      toast('不支持的文件格式，请上传 PDF/DOCX/TXT', 'error');
+      D('parseStatus').style.display = 'none';
+      return;
+    }
+
+    if (!text || text.trim().length < 100) {
+      toast('文档内容为空或过短，请检查文件', 'error');
+      D('parseStatus').style.display = 'none';
+      return;
+    }
+
+    S.docText = text;
+    S.docType = ext;
+    S.step1Done = false; S.step2Done = false; S.step3Done = false; S.step4Done = false;
+    S.step1Result = ''; S.step2Result = ''; S.step3Result = '';
+    S.outlineSections = []; S.sectionContents = {};
+    saveState();
+
+    D('parseStatus').style.display = 'none';
+    D('docInfo').style.display = 'flex';
+    D('docInfoText').textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+    D('docCharCount').textContent = '共 ' + text.length.toLocaleString() + ' 字符 · 约 ' + estimateTokens(text).toLocaleString() + ' tokens';
+    D('extractSection').style.display = 'block';
+
+    // Preview first 3000 chars
+    const preview = text.length > 3000 ? text.slice(0, 3000) + '\n\n... [共 ' + text.length.toLocaleString() + ' 字符，仅显示前3000字符]' : text;
+    D('textPreview').textContent = preview;
+
+    D('step1Result').style.display = 'none';
+    D('btnStep1').disabled = false;
+
+    toast('文档解析成功！可点击「AI 智能解析」开始分析', 'success');
+  } catch (err) {
+    console.error('Parse error:', err);
+    toast('文档解析失败：' + err.message, 'error');
+    D('parseStatus').style.display = 'none';
+  }
+}
+
+async function parsePDF(file) {
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(it => it.str).join(' ');
+    text += pageText + '\n';
+    D('parseProgressBar').style.width = Math.round(i / pdf.numPages * 80) + '%';
+  }
+  return text;
+}
+
+async function parseDOCX(file) {
+  const ab = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  D('parseProgressBar').style.width = '80%';
+  if (result.messages.length) console.warn('Mammoth warnings:', result.messages);
+  return result.value;
+}
+
+async function parseTXT(file) {
+  const text = await file.text();
+  D('parseProgressBar').style.width = '80%';
+  return text;
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function editDocText() {
+  const textarea = document.createElement('textarea');
+  textarea.value = S.docText;
+  textarea.style.cssText = 'width:100%;height:300px;font-family:var(--mono);font-size:0.82em;padding:12px;border:1px solid var(--bd);border-radius:var(--radius-s);resize:vertical;';
+  const preview = D('textPreview');
+  preview.innerHTML = '';
+  preview.appendChild(textarea);
+
+  const actions = document.createElement('div');
+  actions.className = 'fr mt-sm';
+  actions.innerHTML = `
+    <span class="text-sm color-t2">字符数: <b>${S.docText.length.toLocaleString()}</b> | 可编辑后提交</span>
+    <button class="btn btn-p btn-s" id="btnApplyEdit">应用修改</button>
+    <button class="btn btn-s" id="btnRevertEdit">恢复原文</button>
+  `;
+  preview.parentNode.insertBefore(actions, preview.nextSibling);
+
+  D('btnApplyEdit').onclick = () => {
+    S.docText = textarea.value;
+    D('textPreview').textContent = S.docText.slice(0, 3000) + (S.docText.length > 3000 ? '\n\n... [已编辑]' : '');
+    D('docCharCount').textContent = '共 ' + S.docText.length.toLocaleString() + ' 字符 (已编辑)';
+    actions.remove(); textarea.remove();
+    saveState(); toast('文本已更新', 'info');
+  };
+  D('btnRevertEdit').onclick = () => {
+    D('textPreview').textContent = S.docText.slice(0, 3000) + (S.docText.length > 3000 ? '\n\n... [已截断]' : '');
+    actions.remove(); textarea.remove();
+  };
+}
+
+// ==================== API Call ====================
+async function callLLM(systemPrompt, userMessage, onChunk, signal) {
+  const endpoint = D('apiEndpoint').value.trim();
+  const apiKey = D('apiKey').value.trim();
+  const model = D('modelName').value.trim();
+  const temp = parseFloat(D('temperature').value);
+
+  if (!apiKey) { toast('请先在设置中填写 API Key', 'error'); throw new Error('No API Key'); }
+  if (!endpoint) { toast('请先在设置中填写 API 端点', 'error'); throw new Error('No Endpoint'); }
+
+  const base = endpoint.replace(/\/+$/, '');
+  const url = base + '/chat/completions';
+
+  let full = '';
+  let tokenUsage = null;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({
+      model, temperature: temp,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      stream: true, max_tokens: 8192
+    }),
+    signal
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    let msg = `API 错误 (${resp.status})`;
+    if (resp.status === 401) msg = 'API Key 无效，请检查设置';
+    else if (resp.status === 402) msg = '账户余额不足';
+    else if (resp.status === 429) msg = '请求过于频繁，请稍后重试';
+    else if (resp.status === 400) msg = '请求参数错误：' + errText.slice(0, 200);
+    else msg += ': ' + errText.slice(0, 200);
+    toast(msg, 'error');
+    throw new Error(msg);
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const line of lines) {
+      const s = line.trim();
+      if (!s.startsWith('data: ')) continue;
+      const data = s.slice(6);
+      if (data === '[DONE]') continue;
+      try {
+        const j = JSON.parse(data);
+        const delta = j.choices?.[0]?.delta?.content || '';
+        full += delta;
+        if (j.usage) tokenUsage = j.usage;
+        if (onChunk) onChunk(full, delta);
+      } catch(e) {}
+    }
+  }
+
+  return { content: full, usage: tokenUsage };
+}
+
+async function callWithRetry(sys, usr, onChunk, maxRetries) {
+  maxRetries = maxRetries || 2;
+  let lastErr;
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 180000); // 3 min timeout
+      const result = await callLLM(sys, usr, onChunk, ctrl.signal);
+      clearTimeout(timer);
+      return result;
+    } catch (err) {
+      lastErr = err;
+      if (err.name === 'AbortError') { toast('请求超时，正在重试...', 'warning'); }
+      else if (err.message.includes('429') || err.message.includes('rate')) {
+        const wait = (i + 1) * 8000;
+        toast('触发频率限制，' + wait/1000 + '秒后重试 (' + (i+1) + '/' + maxRetries + ')', 'warning');
+        await new Promise(r => setTimeout(r, wait));
+      } else if (i < maxRetries) {
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// ==================== Markdown Renderer ====================
+function renderMarkdown(md) {
+  if (!md) return '';
+  let html = md;
+
+  // Escape HTML except what we generate
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Code blocks ```
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
+    return '<pre><code>' + code.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>') + '</code></pre>';
+  });
+
+  // Inline code ``
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Headers
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Horizontal rules
+  html = html.replace(/^[-*_]{3,}$/gm, '<hr>');
+
+  // Blockquotes
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
+
+  // Checkboxes
+  html = html.replace(/\[ \] /g, '<input type="checkbox"> ');
+  html = html.replace(/\[x\] /gi, '<input type="checkbox" checked> ');
+  html = html.replace(/\[√\] /gi, '<input type="checkbox" checked> ');
+
+  // Tables - handle markdown tables
+  html = html.replace(/((?:^\|.+\|$\n?)+)/gm, (m) => {
+    const lines = m.trim().split('\n');
+    if (lines.length < 2) return m;
+    let table = '<table>';
+    let isHeader = true;
+    for (const line of lines) {
+      if (/^\|[-:\s|]+\|$/.test(line)) { isHeader = false; continue; }
+      const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+      const tag = isHeader ? 'th' : 'td';
+      table += '<tr>' + cells.map(c => '<' + tag + '>' + c + '</' + tag + '>').join('') + '</tr>';
+      if (isHeader) isHeader = false;
+    }
+    table += '</table>';
+    return table;
+  });
+
+  // Numbered lists
+  html = html.replace(/^(\d+)[\.)][ ](.+)$/gm, '<li>$2</li>');
+
+  // Unordered lists
+  html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>[\s\S]*?<\/li>)\n(?!<li>)/g, '<ul>$1</ul>\n');
+
+  // Line breaks - double newline to paragraph
+  const paras = html.split(/\n\n+/);
+  html = paras.map(p => {
+    p = p.trim();
+    if (!p) return '';
+    if (p.startsWith('<h') || p.startsWith('<table') || p.startsWith('<ul') || p.startsWith('<ol')
+        || p.startsWith('<pre') || p.startsWith('<hr') || p.startsWith('<blockquote')) return p;
+    // Wrap remaining blocks
+    if (p.startsWith('<li>')) return '<ul>' + p + '</ul>';
+    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+
+  // Fix: unwrap nested paras in blockquotes etc
+  html = html.replace(/<p><blockquote>/g, '<blockquote>');
+  html = html.replace(/<\/blockquote><\/p>/g, '</blockquote>');
+  html = html.replace(/<p><ul>/g, '<ul>');
+  html = html.replace(/<\/ul><\/p>/g, '</ul>');
+
+  // Restore ampersands in URLs within generated HTML
+  html = html.replace(/&amp;(#[a-z0-9]+;)/g, '&$1');
+
+  // Emoji tags
+  html = html.replace(/🔴/g, '<span class="tag tag-red">🔴 关键</span>');
+  html = html.replace(/🟡/g, '<span class="tag tag-yellow">🟡 重要</span>');
+  html = html.replace(/🟢/g, '<span class="tag tag-green">🟢 一般</span>');
+  html = html.replace(/🚫/g, '<span class="tag tag-red">🚫 废标</span>');
+  html = html.replace(/⚠️/g, '<span class="tag tag-yellow">⚠️ 注意</span>');
+
+  return html;
+}
+
+// ==================== Text Truncation ====================
+function smartTruncate(text, maxTokens) {
+  const estimated = estimateTokens(text);
+  if (estimated <= maxTokens) return text;
+
+  const ratio = maxTokens / estimated;
+  // Keep head (40%) and tail (40%) - middle is usually boilerplate
+  const headLen = Math.floor(text.length * 0.4);
+  const tailLen = Math.floor(text.length * 0.4);
+  const head = text.slice(0, headLen);
+  const tail = text.slice(text.length - tailLen);
+  return head + '\n\n[文档中间部分已自动截断，保留首尾各40%内容 — 原始共' + text.length.toLocaleString() + '字符]\n\n' + tail;
+}
+
+// ===================================================================
+// STEP 1: 招标文件解析
+// ===================================================================
+const STEP1_SYSTEM = `你是一名资深建筑工程投标专员，有10年云南本地投标经验。你的唯一任务：从用户提供的招标文件内容中逐条、完整、不遗漏地提取关键信息。
+
+你是信息提取工具，不是顾问。你的唯一任务：从用户发送的招标文件中逐条提取信息，填入以下模板。
+🚫禁止：写建议、写指南、写分析、解释条款含义、教用户怎么做。
+✅只做：找到原文→填进模板→找不到就写"未提及"→输出完毕。
+✅强制：资格条件逐条列、人员证书逐证列、不得用"等"字缩减。
+✅强制：视为投标人相互串通投标情形必须逐条列出。
+✅强制：未实质性响应招标文件情形必须逐条列出。
+
+输出格式（严格按此，不得省略任何一条）：
+
+一、⚠️ 投标基本信息（重点关注）
+- 项目名称（完整全称）
+- 招标编号
+- 招标人 / 招标代理机构
+- 投标截止时间：____年__月__日__时__分
+- 开标时间：____年__月__日__时__分
+- ⚠️ 投标有效期：自投标截止之日起____日历天
+  （如招标文件未明确，标注"招标文件未提及——请确认，少于招标要求天数=废标"）
+- 投标保证金：金额____万元；缴纳方式____
+  （逐项列出：电汇/转账/保函/现金等，注明每种方式的具体要求）
+- 工期要求：____日历天
+- 质量要求：____（完整摘录）
+- 资格审查方式：资格预审/资格后审
+- 是否接受联合体投标：____
+- 是否允许分包：____
+
+二、💰 投标报价要求（独立模块，重点关注，不得简化）
+- 报价方式：____（总价/单价/费率/工程量清单）
+- 最高限价（如有）：____元
+- ⚠️投标报价书编制要求（完整摘录）：
+  * 编制依据：____
+  * 编制原则：____
+  * 取费标准：____
+  * 需要说明的内容：____
+- 异常低价判定标准（2026年新规）：
+  * 低于最高限价45%是否需要特别说明：____
+  * 低于次低报价50%是否需要特别说明：____
+- 价格评分公式（完整摘录参数）：
+  * 满分：____分
+  * 评标基准价 = ____
+  * 得分公式 = ____
+  * 扣分/加分规则：____
+- 是否包含暂列金/暂估价：____
+- 规费、税金计取标准：____
+
+三、⚠️ 投标申请人资格条件（逐条完整列出，不准简写、不准用"等"字）
+
+1. 企业资质（每项单独一行）：
+- 营业执照（是否要求副本原件）
+- 施工资质：级别____ 专业____
+- 安全生产许可证（有效期要求）
+- 承装/承修/承试电力设施许可证（级别____）
+- ISO认证/质量体系认证（按原文列出）
+- 省外企业入省备案（如云南入滇许可证）
+- 其他资质（逐条列出）
+
+2. 人员要求（逐人逐证列出，不准缩减）：
+项目经理：
+□ 注册建造师证书（专业____ 级别____）
+□ 安全生产考核B证
+□ 职称证书（级别____ 专业____）
+□ 社保证明（近____个月）
+□ 身份证复印件
+□ 业绩证明（____项）
+□ 劳动合同
+□ 无在建承诺书
+技术负责人：
+□ 职称证书（级别____ 专业____）
+□ 学历证书
+□ 社保证明
+□ 身份证复印件
+□ 劳动合同
+□ 无在建承诺书
+安全员：
+□ 安全生产考核C证
+□ 人数要求：____人
+□ 社保证明
+□ 劳动合同
+质量员/施工员/资料员/标准员/材料员/机械员/劳务员：按招标文件逐岗列出
+特种作业人员：证书类型+人数
+⚠️以上所有人员证书全部逐一列出，不准概括为"等"或"其他人员"
+
+3. 业绩要求（逐条完整）：
+- 时间范围：____年____月至____年____月
+- 项目数量：____项
+- 项目类型：____
+- 单项合同金额：不低于____万元
+- 需提供材料：中标通知书____份 + 合同____份 + 验收报告____份
+- 项目经理业绩要求：____（如有）
+- 是否接受联合体业绩：____
+- 发票查验要求（2026新规）：____
+
+4. 财务要求：
+- 近____年审计报告
+- 是否要求无亏损：____
+- 营收要求（如有）：____
+- 流动资金要求（如有）：____
+
+5. 信誉要求（逐条完整摘录）：
+- 失信记录限制
+- 安全事故限制
+- 诉讼/仲裁限制
+- 行业处罚限制（如南方电网通报等）
+- 关联企业限制（单位负责人同一人/控股关系不得同时投标）
+- 近三年无犯罪记录查询函要求
+
+四、📊 评分标准（逐项完整拆解）
+
+1. 技术部分（满分____分）：
+| 评分子项 | 满分 | 得分标准（原文） | A档 | B档 | C档 |
+
+2. 商务部分（满分____分）：
+| 评分子项 | 满分 | 得分标准 | 加分规则 | 扣分规则 |
+
+3. 报价部分（满分____分）：
+- 评标基准价公式：____
+- 得分公式：____
+- 扣分规则：____
+- 异常低价红线：____
+
+五、⚠️ 废标条款（逐条🚫标注，完整摘录+关联提示）
+每条废标条款输出三个维度：
+| 序号 | 废标条款原文 | 触发条件 | 如何避免 |
+
+六、🚫 视为投标人相互串通投标情形（从招标文件逐条列出，每条单独编号，不准合并）
+| 序号 | 串通投标情形（原文） | 判定标准 | 后果 |
+
+七、🚫 未实质性响应招标文件情形（逐条列出，每条单独编号，不准合并）
+| 序号 | 未实质性响应情形 | 对应条款 | 后果 |
+
+八、📋 投标须知前附表与招标公告差异对比
+逐条对比投标须知前附表与招标公告中不一致的内容，重点标注：
+- 近年财务状况的年份要求：前附表____ 招标公告____
+- 近年发生的诉讼及仲裁情况的年份要求：前附表____ 招标公告____
+- 近年完成类似项目的年份要求：前附表____ 招标公告____
+- 近年信誉要求的年份范围：前附表____ 招标公告____
+- 其他不一致内容（逐条列出）
+
+九、📎 投标文件装订、密封、上传要求（单独列出）
+- 装订要求：____
+- 密封要求：____
+- 正本____份，副本____份
+- 电子版要求：____
+- 上传系统要求：____
+- 电子签章要求：____
+- CA数字证书要求：____
+
+十、⚖️ 合同部分质量安全惩处要求
+| 序号 | 违规事项 | 惩处标准（原文） | 违约金/罚款金额 | 其他法律后果 |
+| 1 | 工期延误 | | | |
+| 2 | 质量不达标/未一次性验收合格 | | | |
+| 3 | 安全事故 | | | |
+| 4 | 拖欠农民工工资 | | | |
+| 5 | 转包/违法分包 | | | |
+| 6 | 项目经理/技术负责人擅自更换 | | | |
+| 7 | 其他违约事项（逐条列出） | | | |
+
+十一、🔍 投标人资格自查清单
+| 序号 | 招标文件要求 | 当前是否满足 | 需提供证明材料 | 差距说明 | 风险等级 |
+
+十二、🔒 暗标合规检查清单（对标云南2026年7月1日暗标评审新规）
+
+1. 身份隐匿检查（以下任一项出现 = 废标）：
+| 序号 | 检查项 | 常见违规 | 检查结果 |
+| 1 | 技术标封面是否出现投标人名称 | 封面打印了公司名 | [ ]通过 [ ]不通过 |
+| 2 | 正文是否包含公司名称/简称 | "我司""本公司""XX公司" | [ ]通过 [ ]不通过 |
+| 3 | 是否包含LOGO/标识/水印 | 页眉放了公司logo | [ ]通过 [ ]不通过 |
+| 4 | 是否包含人员姓名 | 写了项目经理名字 | [ ]通过 [ ]不通过 |
+| 5 | 是否包含地址/电话/网址 | 联系方式泄露 | [ ]通过 [ ]不通过 |
+| 6 | 是否包含特有工法/专利名称 | 独有的工法品牌名 | [ ]通过 [ ]不通过 |
+| 7 | 是否包含特殊标记/符号/底纹 | 自定义水印 | [ ]通过 [ ]不通过 |
+| 8 | 文档属性是否残留作者/单位信息 | Word属性里还有公司名 | [ ]通过 [ ]不通过 |
+| 9 | 电子文件命名是否包含投标人信息 | 文件名写了公司名 | [ ]通过 [ ]不通过 |
+
+2. 格式统一检查（格式违规 = 技术标评分零分）：
+| 序号 | 检查项 | 参考标准 | 检查结果 |
+| 1 | 纸张 | A4白纸，70g/㎡ | [ ]通过 [ ]不通过 |
+| 2 | 字体 | 宋体，一级标题三号/正文小四号/表格五号 | [ ]通过 [ ]不通过 |
+| 3 | 字体样式 | 禁止加粗、倾斜、下划线、底纹、阴影、艺术字 | [ ]通过 [ ]不通过 |
+| 4 | 文字颜色 | 全部黑色 | [ ]通过 [ ]不通过 |
+| 5 | 页边距 | 上2.0-2.5cm，其余2.5cm（以项目招标文件为准） | [ ]通过 [ ]不通过 |
+| 6 | 行间距 | 固定值25磅 | [ ]通过 [ ]不通过 |
+| 7 | 对齐 | 左对齐，首行缩进2字符（不得用空格） | [ ]通过 [ ]不通过 |
+| 8 | 段前段后 | 0（不设置空行） | [ ]通过 [ ]不通过 |
+| 9 | 页眉页脚 | 禁止设置 | [ ]通过 [ ]不通过 |
+| 10 | 页码 | 禁止设置（多数项目要求） | [ ]通过 [ ]不通过 |
+| 11 | 标点符号 | 仅限中文标点 | [ ]通过 [ ]不通过 |
+| 12 | 标题序号 | 阿拉伯数字分级：1、1.1、1.1.1 | [ ]通过 [ ]不通过 |
+
+十三、投标文件组成要求（按招标文件原文格式逐部分列出）
+- 资格审查文件包含哪些内容
+- 商务投标文件包含哪些内容
+- 技术投标文件包含哪些内容
+- 每部分的装订要求、签字盖章要求
+
+十四、需要准备的材料原件清单（按资格审查+商务+技术三维度分类，逐项列出）
+
+十五、需要盖章的材料清单（逐项列出，标注盖章类型：公章/法人章/签字）
+
+============================================
+限制：
+- 严格基于用户提供的文本。未提及的信息标注"招标文件未提及"
+- 绝不缩写、概括、简写任何资质条件
+- 投标有效期、报价要求、评分公式为必选项
+- 只分析建筑工程类招标文件
+- 如果用户上传的不是招标文件，礼貌告知
+- 不提供任何违法违规建议
+- 以上全部内容一次性输出，不截断，不省略`;
+
+async function runStep1() {
+  if (!S.docText) { toast('请先上传招标文件', 'warning'); return; }
+  if (!D('apiKey').value.trim()) { toast('请先在设置中填写 API Key', 'warning'); D('settingsPanel').style.display='block'; return; }
+
+  D('btnStep1').disabled = true;
+  D('step1Progress').style.display = 'block';
+  D('step1Result').style.display = 'none';
+  D('step1Status').innerHTML = '<span class="live"></span> AI 正在分析招标文件...';
+  D('step1ProgressBar').style.width = '5%';
+  setCurrentStep('解析招标文件');
+
+  const text = smartTruncate(S.docText, 80000);
+
+  try {
+    const result = await callWithRetry(
+      STEP1_SYSTEM,
+      '请分析以下招标文件内容，严格按模板逐条提取信息：\n\n' + text,
+      (full, delta) => {
+        D('step1Output').innerHTML = renderMarkdown(full);
+        D('step1ProgressBar').style.width = Math.min(90, 5 + full.length / 100) + '%';
+      }
+    );
+
+    S.step1Result = result.content;
+    S.step1Tokens = result.usage ? result.usage.total_tokens : estimateTokens(STEP1_SYSTEM) + estimateTokens(text) + estimateTokens(result.content);
+    S.step1Done = true;
+    S.totalTokens += S.step1Tokens;
+    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP1_SYSTEM) + estimateTokens(text), estimateTokens(result.content));
+
+    D('step1Output').innerHTML = renderMarkdown(result.content);
+    D('step1Result').style.display = 'block';
+    D('step1Progress').style.display = 'none';
+    D('btnStep1').disabled = false;
+    D('btnStep1').textContent = '🔄 重新解析';
+
+    updateTabState(1);
+    saveState();
+    setCurrentStep('解析完成');
+    toast('招标文件解析完成！可切换到第2步查看材料清单', 'success');
+
+  } catch (err) {
+    D('step1Progress').style.display = 'none';
+    D('btnStep1').disabled = false;
+    setCurrentStep('解析失败');
+    console.error('Step 1 error:', err);
+  }
+}
+
+// ===================================================================
+// STEP 2: 材料清单
+// ===================================================================
+const STEP2_SYSTEM = `你是一名投标项目管理员。你接收招标文件解析结果，生成逐项对标招标文件要求的材料清单。必须结合"招标文件投标文件组成要求"+"投标文件格式"+"合同条款"三个维度。
+
+输出格式：
+
+一、资格审查材料清单
+| 序号 | [ ] | 材料名称 | 具体内容及格式要求 | 份数 | 原件/复印件 | 🔴🟡🟢 | 对应条款 | 备注 |
+
+二、商务投标材料清单
+| 序号 | [ ] | 材料名称 | 具体内容及格式要求 | 份数 | 盖章要求 | 🔴🟡🟢 | 对应条款 |
+
+三、技术投标材料清单
+| 序号 | [ ] | 材料名称 | 具体内容及格式要求 | 备注 | 🔴🟡🟢 | 对应条款 |
+
+四、人员证件材料逐人逐证清单（不准用"等"字，逐证分列）
+格式：
+- [ ] 项目经理·证件1：一级建造师注册证书（机电工程）——复印件___份
+- [ ] 项目经理·证件2：安全生产考核合格证书B证——复印件___份
+- [ ] 项目经理·证件3：中级及以上职称证书——复印件___份
+- [ ] 项目经理·证件4：身份证——复印件___份
+- [ ] 项目经理·证件5：近6个月社保证明——原件___份
+- [ ] 项目经理·证件6：业绩证明材料——复印件___份
+（技术负责人/安全员/质量员等同理逐证列出）
+
+五、合同相关材料清单
+- [ ] 履约保证金（金额____元，缴纳方式____，退还条件____）
+- [ ] 质量保证金
+- [ ] 保险证明
+- [ ] 农民工工资保证金
+
+六、装订及封装要求检查清单
+| 检查项 | 要求 | 状态 |
+|--------|------|------|
+| 正本份数 | ____份 | [ ] |
+| 副本份数 | ____份 | [ ] |
+| 电子版 | ____份，格式____ | [ ] |
+| 装订方式 | 胶装/活页/其他 | [ ] |
+| 正本签字 | 逐页小签/骑缝章 | [ ] |
+| 密封袋标记 | 项目名称+投标人+文件类型 | [ ] |
+
+七、📋 结构化响应检查表（2026新规GB/T 43289-2026）
+新规要求逐条对应填写"是否响应→响应内容→证明材料页码"
+| 条款号 | 招标要求 | 是否响应 | 响应内容 | 证明材料 | 页码 | 状态 |
+
+每项标注重要级别：🔴关键（缺了废标）/ 🟡重要（影响得分）/ 🟢一般（有就行）
+逐人逐证列出，不准缩减，不准用"等"字概括。`;
+
+async function runStep2() {
+  if (!S.step1Done) { toast('请先完成第1步招标解析', 'warning'); return; }
+
+  D('btnStep2').disabled = true;
+  D('step2Progress').style.display = 'block';
+  D('step2Result').style.display = 'none';
+  setCurrentStep('生成材料清单');
+
+  try {
+    const result = await callWithRetry(
+      STEP2_SYSTEM,
+      '基于以下招标解析结果，生成完整的投标材料清单（逐人逐证逐项，不遗漏不缩减）：\n\n' + S.step1Result,
+      (full) => {
+        D('step2Output').innerHTML = renderMarkdown(full);
+      }
+    );
+
+    S.step2Result = result.content;
+    S.step2Tokens = result.usage ? result.usage.total_tokens : estimateTokens(STEP2_SYSTEM) + estimateTokens(S.step1Result) + estimateTokens(result.content);
+    S.step2Done = true;
+    S.totalTokens += S.step2Tokens;
+    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP2_SYSTEM) + estimateTokens(S.step1Result), estimateTokens(result.content));
+
+    D('step2Output').innerHTML = renderMarkdown(result.content);
+    D('step2Result').style.display = 'block';
+    D('step2Progress').style.display = 'none';
+    D('btnStep2').disabled = false;
+    D('btnStep2').textContent = '🔄 重新生成';
+
+    updateTabState(2);
+    saveState();
+    setCurrentStep('清单完成');
+    toast('材料清单生成完成！可切换到第3步生成技术标大纲', 'success');
+
+  } catch (err) {
+    D('step2Progress').style.display = 'none';
+    D('btnStep2').disabled = false;
+    setCurrentStep('清单失败');
+  }
+}
+
+// ===================================================================
+// STEP 3: 技术标大纲
+// ===================================================================
+const STEP3_SYSTEM = `你是一名建筑工程技术标专家。接收招标解析和材料清单结果，严格按照招标文件"评标办法"和"投标文件格式"生成技术标大纲。每一章必须标注得分点。
+
+输出格式：
+
+技术标大纲（暗标合规版）
+
+⚠️ 暗标编制提醒：
+- 本大纲不含任何投标人身份信息
+- 所有章节名称使用招标文件规定的标准名称
+- 字体/字号/行距等格式以项目招标文件为准
+- 全文禁用"我司""本公司""我们"等身份词
+- 图表全部黑白、无彩色标识
+
+一、工程概况及特点
+对应评分项目：间接影响施工方案得分
+本章得分点：项目理解深度、重难点识别准确度
+💡建议附：项目总平面图（黑白线条版）
+
+二、施工现场组织机构 ⭐
+对应评分项目：施工管理机构人员
+本章得分点：组织机构合理性、人员资质匹配度
+💡建议附：项目管理机构框图（黑白版，不出现人名）
+
+三、施工方案 ⭐⭐⭐
+对应评分项目：施工方案
+得分点逐条列出
+💡建议附：施工总平面布置图
+
+四、工期及施工进度计划 ⭐
+对应评分项目：间接影响施工方案得分
+得分点逐条列出
+💡建议附：施工进度网络图/横道图（黑白版）
+
+五、质量管理体系 ⭐
+对应评分项目：质量目标及保证措施
+得分点逐条列出
+
+六、安全管理体系 ⭐
+对应评分项目：安全目标及文明施工措施
+得分点逐条列出
+
+七、环境保护及文明施工
+得分点逐条列出
+
+八、资源配备计划
+得分点逐条列出
+💡建议附：拟投入主要施工机械装备表、劳动力计划表
+
+九、计划、统计和信息管理
+得分点逐条列出
+
+十、项目管理机构配置
+得分点逐条列出
+⚠️暗标注意：不出现人名
+
+十一、售后服务及保修
+得分点逐条列出
+
+十二、📋 差异响应表
+| 序号 | 招标文件条款 | 投标响应方案 | 满足 | 证明材料 | 偏差说明 |
+（逐条对比招标文件实质性条款，标注偏离项）
+
+十三、🎯 评分自检表
+| 评分项目 | 满分 | 自评得分 | 得分依据 | 丢分风险 | 改进建议 |
+（对标合肥AI评审标准，模拟评标专家打分逻辑）
+
+十四、💰 异常报价自检
+| 检查项 | 基准/红线 | 投标值 | 状态 | 风险 |
+|--------|----------|--------|------|------|
+| 总价 vs 最高限价 | ____元 | ____元 | [ ]安全 [ ]警戒 [ ]超标 | |
+| 总价 vs 次低报价50%（2026新规红线） | ____元 | ____元 | [ ]安全 [ ]警戒 | |
+| 总价 vs 最高限价45%（异常低价审查线） | ____元 | ____元 | [ ]安全 [ ]需说明 | |
+| 主要清单单价 vs 市场价 | ____ | ____ | [ ]正常 [ ]偏高 [ ]偏低 | |
+| 暂列金/暂估价 | ____元 | ____元 | [ ]符合 [ ]不符合 | |
+| 规费/税金 | ____% | ____% | [ ]符合 [ ]不符合 | |
+
+十五、📊 工程量清单核对表
+| 序号 | 清单项目 | 单位 | 招标量 | 投标量 | 投标单价 | 市场参考 | 偏离 | 风险 |
+
+============================================
+通用说明：
+1. ⭐数量 = 评分权重（⭐<30% ⭐⭐30-50% ⭐⭐⭐>50%）
+2. 💡 = 配图建议（暗标要求：黑白线条图、无标识、无彩色）
+3. 每章必标评分项目和得分点
+4. 暗标格式以项目具体招标文件为准——云南暂无全省统一标准
+5. 差异响应表对标合肥AI评审标准（91.17%采纳率）
+6. 异常报价自检对标云南AI评标"异常报价智能甄别"功能
+7. 结构化响应对标2026年新规GB/T 43289-2026`;
+
+async function runStep3() {
+  if (!S.step2Done) { toast('请先完成第2步材料清单', 'warning'); return; }
+
+  D('btnStep3').disabled = true;
+  D('step3Progress').style.display = 'block';
+  D('step3Result').style.display = 'none';
+  setCurrentStep('生成技术标大纲');
+
+  try {
+    const userMsg = '招标解析结果：\n' + S.step1Result.slice(0, 15000) + '\n\n材料清单结果（摘要）：\n' + S.step2Result.slice(0, 8000) + '\n\n请生成技术标大纲及得分要点。';
+    const result = await callWithRetry(
+      STEP3_SYSTEM,
+      userMsg,
+      (full) => {
+        D('step3Output').innerHTML = renderMarkdown(full);
+      }
+    );
+
+    S.step3Result = result.content;
+    S.step3Tokens = result.usage ? result.usage.total_tokens : estimateTokens(STEP3_SYSTEM) + estimateTokens(userMsg) + estimateTokens(result.content);
+    S.step3Done = true;
+    S.totalTokens += S.step3Tokens;
+    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP3_SYSTEM) + estimateTokens(userMsg), estimateTokens(result.content));
+
+    D('step3Output').innerHTML = renderMarkdown(result.content);
+    D('step3Result').style.display = 'block';
+    D('step3Progress').style.display = 'none';
+    D('btnStep3').disabled = false;
+    D('btnStep3').textContent = '🔄 重新生成';
+
+    parseOutlineSections();
+    renderSectionSelector();
+    updateTabState(3);
+    saveState();
+    setCurrentStep('大纲完成');
+    toast('技术标大纲生成完成！可切换到第4步逐节生成标书内容', 'success');
+
+  } catch (err) {
+    D('step3Progress').style.display = 'none';
+    D('btnStep3').disabled = false;
+    setCurrentStep('大纲失败');
+  }
+}
+
+// ===================================================================
+// STEP 4: 技术标逐节生成
+// ===================================================================
+function parseOutlineSections() {
+  if (!S.step3Result) return;
+  const text = S.step3Result;
+  const sections = [];
+  const patterns = [
+    /^[一二三四五六七八九十]+[、.．]\s*(.+)$/gm,
+    /^\d+[、.．]\s*(.+)$/gm,
+    /^（[一二三四五六七八九十]+）\s*(.+)$/gm,
+  ];
+
+  const seen = new Set();
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const full = match[0].trim();
+      if (seen.has(full)) continue;
+      seen.add(full);
+      // Skip non-content sections
+      if (/附件|自检|异常报价|差异响应|工程量清单|通用说明|限制/.test(full)) continue;
+      sections.push({
+        title: full,
+        content: '',
+        selected: true,
+        done: false
+      });
+    }
+  }
+
+  if (sections.length === 0) {
+    // Fallback: split by ## headers
+    const h2 = text.match(/^##\s+(.+)$/gm);
+    if (h2) {
+      h2.forEach(h => {
+        const title = h.replace(/^##\s+/, '').trim();
+        if (!/附件|自检|异常报价/.test(title)) {
+          sections.push({ title, content: '', selected: true, done: false });
+        }
+      });
+    }
+  }
+
+  S.outlineSections = sections;
+  // Restore existing contents
+  for (const s of S.outlineSections) {
+    if (S.sectionContents[s.title]) {
+      s.content = S.sectionContents[s.title];
+      s.done = true;
+    }
+  }
+  saveState();
+}
+
+function renderSectionSelector() {
+  const container = D('sectionSelector');
+  if (S.outlineSections.length === 0) {
+    container.innerHTML = '<div class="text-sm color-t2">大纲中未检测到章节目录，请确认第3步已完成</div>';
+    return;
+  }
+
+  container.innerHTML = S.outlineSections.map((s, i) => `
+    <div class="section-item ${s.selected ? 'selected' : ''}" onclick="toggleSection(${i})">
+      <input type="checkbox" ${s.selected ? 'checked' : ''} onclick="event.stopPropagation();toggleSection(${i})">
+      <span class="s-name">${s.title}</span>
+      <span class="s-status ${s.done ? 'done' : ''}">${s.done ? '✅ 已生成' : ''}</span>
+    </div>
+  `).join('');
+}
+
+function toggleSection(i) {
+  S.outlineSections[i].selected = !S.outlineSections[i].selected;
+  renderSectionSelector();
+  saveState();
+}
+
+function toggleAllSections(val) {
+  S.outlineSections.forEach(s => s.selected = val);
+  renderSectionSelector();
+  saveState();
+}
+
+function getSectionPrompt(sectionTitle) {
+  // Choose specialized system prompt based on section type
+  let expertise = '';
+  if (/施工方案|施工组织|施工总/.test(sectionTitle)) {
+    expertise = '你是电力工程/建筑工程施工技术专家，有15年施工现场经验。编写时重点关注：具体工法描述、技术参数、工序流程、机械设备选型。';
+  } else if (/安全/.test(sectionTitle)) {
+    expertise = '你是建筑施工安全专家。编写时重点关注：危险源辨识（LEC法）、安全管理体系、应急预案、三级安全教育、安全技术交底。';
+  } else if (/质量/.test(sectionTitle)) {
+    expertise = '你是建筑工程质量管理专家。编写时重点关注：质量控制点设置、三检制（自检/互检/专检）、质量通病防治、材料检验试验计划。';
+  } else if (/进度|工期/.test(sectionTitle)) {
+    expertise = '你是工程项目管理专家。编写时重点关注：关键线路分析、里程碑节点、资源调配计划、工期保障措施。';
+  } else if (/环境|环保|文明/.test(sectionTitle)) {
+    expertise = '你是绿色施工专家。编写时重点关注：扬尘控制、噪音管理、废弃物分类处理、节能减排措施。';
+  } else if (/资源|配备|机械|劳动力/.test(sectionTitle)) {
+    expertise = '你是施工资源管理专家。编写时重点关注：机械设备进出场计划、劳动力动态调配、材料供应保障。';
+  } else if (/管理|机构|组织|人员/.test(sectionTitle)) {
+    expertise = '你是工程项目管理专家。编写时重点关注：组织架构设计、岗位职责划分、管理人员资历描述。';
+  } else {
+    expertise = '你是建筑工程技术标编写专家，有丰富的技术标编写经验。';
+  }
+
+  return expertise + `
+
+## 输入信息
+- 本章标题：${sectionTitle}
+- 招标文件解析结果（含评分标准）：见用户消息
+
+## 输出要求
+1. 内容详实、专业、可操作，使用工程行业标准术语
+2. 结构：完整的1.1/1.2/1.3子章节体系，每个子章节有实质内容
+3. 暗标合规：全文不出现"我司""本公司""我方"等身份词，使用"投标人""承包方""施工单位"；不出现具体人员姓名、公司名称、商标品牌
+4. 得分点覆盖：必须覆盖评分标准中列出的所有得分点
+5. 具体性：避免空洞套话，给出具体的施工方法、技术参数、管理流程、标准规范引用
+6. 数据占位：使用"____"格式标注需要用户填入的实际数据（如工期天数、具体人员数量等）
+7. 篇幅：控制在2000-3500字，写出有深度的技术内容
+
+## 输出格式
+直接以章节标题开始，然后是子章节内容。不要输出"好的""以下是"等开头语。`;
+}
+
+async function runStep4() {
+  const selected = S.outlineSections.filter(s => s.selected);
+  if (selected.length === 0) { toast('请至少选择一个章节', 'warning'); return; }
+  if (!S.step3Done) { toast('请先完成第3步技术标大纲', 'warning'); return; }
+
+  D('btnStep4').disabled = true;
+  D('step4Progress').style.display = 'block';
+  D('step4Result').style.display = 'block';
+  setCurrentStep('生成技术标章节');
+
+  // Build context from step1 results (scoring criteria)
+  const contextBase = '以下是招标文件的解析结果（重点关注评分标准和要求）：\n\n' + S.step1Result.slice(0, 20000);
+
+  for (let i = 0; i < selected.length; i++) {
+    const s = selected[i];
+    s.done = false;
+    S.sectionContents[s.title] = '';
+    renderSectionSelector();
+    renderStep4Results();
+
+    const progText = D('step4ProgText');
+    progText.innerHTML = '<span class="live"></span> 正在生成：' + s.title + ' (' + (i+1) + '/' + selected.length + ')';
+    D('step4ProgBar').style.width = Math.round(i / selected.length * 100) + '%';
+
+    try {
+      const result = await callWithRetry(
+        getSectionPrompt(s.title),
+        contextBase + '\n\n请编写以下章节的技术标内容：\n' + s.title,
+        (full) => {
+          S.sectionContents[s.title] = full;
+          s.content = full;
+          renderStep4Results();
+        }
+      );
+
+      S.sectionContents[s.title] = result.content;
+      s.content = result.content;
+      s.done = true;
+      const tokens = result.usage ? result.usage.total_tokens : estimateTokens(getSectionPrompt(s.title)) + estimateTokens(contextBase) + estimateTokens(result.content);
+      S.totalTokens += tokens;
+      S.totalCost += calcCost(D('modelName').value, estimateTokens(getSectionPrompt(s.title)) + estimateTokens(contextBase), estimateTokens(result.content));
+
+      renderSectionSelector();
+      renderStep4Results();
+      saveState();
+
+    } catch (err) {
+      S.sectionContents[s.title] = '[生成失败: ' + err.message + '] —— 可点击"重新生成本节"重试';
+      s.content = S.sectionContents[s.title];
+      s.done = false;
+      renderSectionSelector();
+      renderStep4Results();
+      console.error('Step 4 section error:', s.title, err);
+    }
+  }
+
+  S.step4Done = selected.every(s => s.done);
+  D('step4ProgBar').style.width = '100%';
+  D('step4ProgText').textContent = selected.every(s => s.done) ? '✅ 全部章节生成完成！' : '⚠️ 部分章节生成完成（有失败项）';
+  D('btnStep4').disabled = false;
+  D('btnStep4').textContent = '🔄 重新生成';
+  updateTabState(4);
+  updateTokenBar();
+  saveState();
+  setCurrentStep('标书完成');
+}
+
+function renderStep4Results() {
+  const container = D('step4ResultInner');
+  const selected = S.outlineSections.filter(s => s.selected);
+  if (selected.length === 0) { container.innerHTML = ''; return; }
+
+  container.innerHTML = selected.map((s, i) => `
+    <details ${s.content && !s.done ? 'open' : ''} style="margin-bottom:12px;border:1px solid var(--bd);border-radius:var(--radius-s);padding:0">
+      <summary style="padding:12px 16px;cursor:pointer;font-weight:600;background:var(--bd-l);border-radius:var(--radius-s);display:flex;align-items:center;justify-content:space-between">
+        <span>${s.title}</span>
+        <span class="text-sm" style="color:${s.done ? 'var(--success)' : s.content ? 'var(--primary)' : 'var(--t3)'}">${s.done ? '✅' : s.content ? '🔄 生成中' : '⏳ 等待'}</span>
+      </summary>
+      <div style="padding:14px 16px">
+        <div class="result-content">${s.content ? renderMarkdown(s.content) : '<span class="color-t2 text-sm">等待生成...</span>'}</div>
+        ${s.done ? `<div class="fr mt-sm"><button class="btn btn-s" onclick="regenerateSection('${s.title.replace(/'/g, "\\'")}')">🔄 重新生成本节</button><button class="btn btn-s" onclick="editSection('${s.title.replace(/'/g, "\\'")}')">✏️ 编辑</button></div>` : ''}
+        ${!s.done && s.content && s.content.startsWith('[生成失败') ? `<div class="fr mt-sm"><button class="btn btn-s btn-w" onclick="regenerateSection('${s.title.replace(/'/g, "\\'")}')">🔄 重新生成本节</button></div>` : ''}
+      </div>
+    </details>
+  `).join('');
+}
+
+async function regenerateSection(title) {
+  const s = S.outlineSections.find(s => s.title === title);
+  if (!s) return;
+  s.selected = true; s.done = false; S.sectionContents[title] = '';
+  renderSectionSelector(); renderStep4Results();
+
+  const contextBase = '以下是招标文件的解析结果（重点关注评分标准和要求）：\n\n' + S.step1Result.slice(0, 20000);
+
+  try {
+    D('step4ProgText').innerHTML = '<span class="live"></span> 重新生成：' + title;
+    const result = await callWithRetry(
+      getSectionPrompt(title),
+      contextBase + '\n\n请编写以下章节的技术标内容：\n' + title,
+      (full) => { S.sectionContents[title] = full; s.content = full; renderStep4Results(); }
+    );
+    S.sectionContents[title] = result.content;
+    s.content = result.content;
+    s.done = true;
+    renderSectionSelector(); renderStep4Results();
+    saveState();
+    toast('「' + title + '」重新生成完成', 'success');
+  } catch (err) {
+    S.sectionContents[title] = '[生成失败: ' + err.message + ']';
+    s.content = S.sectionContents[title];
+    renderSectionSelector(); renderStep4Results();
+  }
+}
+
+function editSection(title) {
+  const s = S.outlineSections.find(s => s.title === title);
+  if (!s) return;
+  const textarea = document.createElement('textarea');
+  textarea.value = s.content;
+  textarea.style.cssText = 'width:100%;height:400px;font-family:var(--mono);font-size:0.85em;padding:12px;border:1px solid var(--bd);border-radius:var(--radius-s);resize:vertical;';
+  D('step4ResultInner').querySelectorAll('details').forEach(d => {
+    if (d.querySelector('summary').textContent.includes(title)) {
+      const contentDiv = d.querySelector('.result-content');
+      contentDiv.innerHTML = '';
+      contentDiv.appendChild(textarea);
+      const actions = document.createElement('div');
+      actions.className = 'fr mt-sm';
+      actions.innerHTML = `<button class="btn btn-p btn-s" id="saveEdit">保存修改</button><button class="btn btn-s" id="cancelEdit">取消</button>`;
+      contentDiv.appendChild(actions);
+      D('saveEdit').onclick = () => {
+        s.content = textarea.value;
+        S.sectionContents[title] = textarea.value;
+        renderStep4Results(); saveState(); toast('修改已保存', 'info');
+      };
+      D('cancelEdit').onclick = () => { renderStep4Results(); };
+    }
+  });
+}
+
+// ===================================================================
+// Word Export
+// ===================================================================
+async function exportWord() {
+  if (!S.step1Done) { toast('请至少完成第1步再导出', 'warning'); return; }
+  setCurrentStep('导出中');
+
+  try {
+    if (typeof docx === 'undefined' || typeof saveAs === 'undefined') {
+      // Fallback: plain text export
+      exportText();
+      return;
+    }
+
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType } = docx;
+
+    const children = [];
+
+    // Cover
+    children.push(
+      new Paragraph({ spacing: { before: 2000 }, children: [] }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: '投标文件技术部分', bold: true, size: 48, font: 'SimHei' })],
+        spacing: { after: 400 }
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: '（暗标·技术标）', size: 28, color: '666666', font: 'SimHei' })],
+        spacing: { after: 800 }
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: '项目名称：' + (S.docName || '____'), size: 24, font: 'SimSun' })],
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: '日期：____年____月____日', size: 24, font: 'SimSun' })],
+        spacing: { after: 2000 }
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: '【暗标提醒：本文不含任何投标人身份信息】', size: 20, color: 'CC0000', font: 'SimSun' })],
+      }),
+      new Paragraph({ children: [new PageBreak()] })
+    );
+
+    // Part 1: Parse results
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: '第一部分：招标文件解析', bold: true, size: 28, font: 'SimHei' })],
+        heading: HeadingLevel.HEADING_1, spacing: { after: 200 }
+      })
+    );
+    children.push(...markdownToDocx(S.step1Result));
+
+    // Part 2: Material checklist
+    if (S.step2Done) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '第二部分：投标材料清单', bold: true, size: 28, font: 'SimHei' })],
+          heading: HeadingLevel.HEADING_1, spacing: { after: 200 }
+        })
+      );
+      children.push(...markdownToDocx(S.step2Result));
+    }
+
+    // Part 3: Outline
+    if (S.step3Done) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '第三部分：技术标大纲', bold: true, size: 28, font: 'SimHei' })],
+          heading: HeadingLevel.HEADING_1, spacing: { after: 200 }
+        })
+      );
+      children.push(...markdownToDocx(S.step3Result));
+    }
+
+    // Part 4: Full technical bid
+    if (S.step4Done || Object.keys(S.sectionContents).length > 0) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '第四部分：技术标全文', bold: true, size: 28, font: 'SimHei' })],
+          heading: HeadingLevel.HEADING_1, spacing: { after: 200 }
+        })
+      );
+      for (const s of S.outlineSections) {
+        if (S.sectionContents[s.title]) {
+          children.push(
+            new Paragraph({
+              children: [new TextRun({ text: s.title, bold: true, size: 22, font: 'SimHei' })],
+              heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 }
+            })
+          );
+          // Split content into paragraphs
+          const lines = S.sectionContents[s.title].split('\n');
+          for (const line of lines) {
+            if (line.trim()) {
+              children.push(new Paragraph({
+                children: [new TextRun({ text: line.trim(), size: 21, font: 'SimSun' })],
+                spacing: { line: 360 }
+              }));
+            }
+          }
+        }
+      }
+    }
+
+    const doc = new Document({
+      title: S.docName || '技术标',
+      description: '由AI标书拆解+技术标生成器自动生成',
+      styles: {
+        default: {
+          document: {
+            run: { font: 'SimSun', size: 21 },
+            paragraph: { spacing: { line: 360 } }
+          }
+        }
+      },
+      sections: [{ children }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, (S.docName || '技术标') + '_标书拆解报告.docx');
+    setCurrentStep('导出完成');
+    toast('Word 文档导出成功！', 'success');
+
+  } catch (err) {
+    console.error('Export error:', err);
+    toast('Word导出失败，尝试纯文本导出...', 'warning');
+    exportText();
+  }
+}
+
+function markdownToDocx(md) {
+  // Simplified: convert markdown text to docx paragraphs
+  if (!md) return [];
+  const lines = md.split('\n');
+  const paras = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('# ')) {
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: trimmed.replace(/^#+ /, ''), bold: true, size: 24, font: 'SimHei' })],
+        spacing: { before: 200, after: 100 }
+      }));
+    } else if (trimmed.startsWith('## ')) {
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: trimmed.replace(/^##+ /, ''), bold: true, size: 22, font: 'SimHei' })],
+        spacing: { before: 160, after: 80 }
+      }));
+    } else {
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: trimmed, size: 21, font: 'SimSun' })],
+        spacing: { line: 360 }
+      }));
+    }
+  }
+  return paras;
+}
+
+function exportText() {
+  let content = '标书拆解报告\n';
+  content += '项目：' + (S.docName || '未命名') + '\n';
+  content += '='.repeat(60) + '\n\n';
+
+  if (S.step1Result) {
+    content += '第一部分：招标文件解析\n' + '='.repeat(40) + '\n';
+    content += S.step1Result + '\n\n';
+  }
+  if (S.step2Result) {
+    content += '第二部分：投标材料清单\n' + '='.repeat(40) + '\n';
+    content += S.step2Result + '\n\n';
+  }
+  if (S.step3Result) {
+    content += '第三部分：技术标大纲\n' + '='.repeat(40) + '\n';
+    content += S.step3Result + '\n\n';
+  }
+  if (Object.keys(S.sectionContents).length > 0) {
+    content += '第四部分：技术标全文\n' + '='.repeat(40) + '\n';
+    for (const s of S.outlineSections) {
+      if (S.sectionContents[s.title]) {
+        content += '\n' + s.title + '\n' + '-'.repeat(30) + '\n';
+        content += S.sectionContents[s.title] + '\n';
+      }
+    }
+  }
+
+  const blob = new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (S.docName || '标书拆解') + '_完整报告.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setCurrentStep('导出完成');
+  toast('纯文本报告导出成功！', 'success');
+}
+
+// ===================================================================
+// Activation System
+// ===================================================================
+const ACT_SECRET_PARTS = [
+  [98,105,100,45,116,111,111,108],
+  [45,118,49,46,48,45,120,105,97,111,116,97,110,103],
+  [45,50,48,50,54,45,115,101,99,114,101,116],
+  [45,107,101,121],
+  [45,100,111,45,110,111,116],
+  [45,115,104,97,114,101]
+];
+function _sk() {
+  return ACT_SECRET_PARTS.map(p => String.fromCharCode.apply(null, p)).join('');
+}
+
+async function verifyCode(code) {
+  const clean = code.replace(/-/g, '').replace(/\s/g, '');
+  let decoded;
+  try {
+    decoded = atob(clean);
+  } catch(e) { return { valid: false, error: '激活码格式无效' }; }
+
+  const parts = decoded.split('|');
+  if (parts.length !== 4) return { valid: false, error: '激活码格式无效' };
+
+  const [version, expiryTs, nonce, sig] = parts;
+  const payload = `${version}|${expiryTs}|${nonce}`;
+
+  // Verify HMAC using Web Crypto
+  const enc = new TextEncoder();
+  const keyData = enc.encode(_sk());
+  const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+  const payloadBytes = enc.encode(payload);
+  const expectedSig = await crypto.subtle.sign('HMAC', cryptoKey, payloadBytes);
+  const expectedHex = Array.from(new Uint8Array(expectedSig)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16);
+
+  if (sig !== expectedHex) return { valid: false, error: '激活码验证失败，请检查是否输入正确' };
+
+  const expiry = new Date(parseInt(expiryTs));
+  if (Date.now() > expiry.getTime()) return { valid: false, error: '激活码已过期（到期: ' + expiry.toLocaleDateString('zh-CN') + '），请续费获取新码' };
+
+  return { valid: true, version, expiry };
+}
+
+function activate() {
+  const code = D('actCode').value.trim();
+  if (!code) { D('actError').textContent = '请输入激活码'; return; }
+
+  D('actError').textContent = '验证中...';
+  D('actError').style.color = '#64748b';
+
+  verifyCode(code).then(result => {
+    if (!result.valid) {
+      D('actError').textContent = result.error;
+      D('actError').style.color = '#ef4444';
+      return;
+    }
+
+    const act = {
+      version: result.version,
+      expiry: result.expiry.toISOString(),
+      code: code
+    };
+    localStorage.setItem('bid_activation', JSON.stringify(act));
+    window._act = act;
+    D('activationOverlay').style.display = 'none';
+    updateVersionUI();
+    toast('激活成功！' + (result.version === 'pro' ? '专业版' : '基础版') + '，到期: ' + result.expiry.toLocaleDateString('zh-CN'), 'success');
+  }).catch(err => {
+    D('actError').textContent = '验证出错: ' + err.message;
+    D('actError').style.color = '#ef4444';
+  });
+}
+
+function checkActivation() {
+  const saved = localStorage.getItem('bid_activation');
+  if (!saved) return false;
+
+  let act;
+  try { act = JSON.parse(saved); } catch(e) { return false; }
+
+  if (new Date(act.expiry) < new Date()) {
+    // Expired - show overlay
+    D('activationOverlay').style.display = 'flex';
+    D('actError').textContent = '激活码已过期（到期: ' + new Date(act.expiry).toLocaleDateString('zh-CN') + '），请续费';
+    D('actError').style.color = '#ef4444';
+    window._act = null;
+    return false;
+  }
+
+  // Re-verify stored code
+  verifyCode(act.code).then(result => {
+    if (!result.valid) {
+      localStorage.removeItem('bid_activation');
+      D('activationOverlay').style.display = 'flex';
+      D('actError').textContent = result.error;
+      window._act = null;
+    } else {
+      window._act = act;
+      updateVersionUI();
+    }
+  });
+
+  window._act = act;
+  return true;
+}
+
+function updateVersionUI() {
+  const act = window._act;
+  if (!act) return;
+
+  const badge = D('versionBadge');
+  const isPro = act.version === 'pro';
+  badge.textContent = isPro ? '专业版' : '基础版';
+  badge.style.background = isPro ? '#ecfdf5' : '#eff6ff';
+  badge.style.color = isPro ? '#065f46' : '#1e40af';
+
+  // Lock Step 4 for basic
+  if (!isPro) {
+    D('step4Locked').querySelector('h2').textContent = '🔒 专业版功能';
+    D('step4Locked').querySelector('p').textContent = '技术标逐节生成是专业版功能（¥39.9/月），请联系卖家升级';
+    D('step4Locked').querySelector('button').textContent = '联系卖家升级';
+    D('step4Locked').querySelector('button').onclick = function() { toast('闲鱼搜索「标书拆解+技术标生成器」联系卖家升级专业版', 'info'); };
+  }
+}
+function saveToHistory() {
+  if (!S.step1Done) { toast('请至少完成第1步再保存', 'warning'); return; }
+  const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const entry = {
+    id: Date.now(),
+    name: S.docName || '未命名项目',
+    date: new Date().toLocaleString('zh-CN'),
+    step1Done: S.step1Done, step2Done: S.step2Done, step3Done: S.step3Done, step4Done: S.step4Done,
+    totalTokens: S.totalTokens, totalCost: S.totalCost,
+    state: JSON.parse(JSON.stringify(S))
+  };
+  // Remove old entry with same name
+  const idx = history.findIndex(h => h.name === entry.name);
+  if (idx >= 0) history.splice(idx, 1);
+  history.unshift(entry);
+  // Keep last 10
+  if (history.length > 10) history.length = 10;
+  localStorage.setItem(HIST_KEY, JSON.stringify(history));
+  toast('项目已保存到历史记录', 'success');
+}
+
+// ===================================================================
+// Init
+// ===================================================================
+function init() {
+  loadSettings();
+
+  // Check activation
+  const activated = checkActivation();
+  if (activated) {
+    D('activationOverlay').style.display = 'none';
+    updateVersionUI();
+  }
+
+  // Auto-show settings if no API key configured
+  const hasKey = D('apiKey').value.trim();
+  D('settingsPanel').style.display = hasKey ? 'none' : 'block';
+  D('apiNotice').style.display = hasKey ? 'none' : 'flex';
+
+  // Check library loading
+  checkLibs();
+
+  // Restore saved state
+  if (S.docText) {
+    D('docInfo').style.display = 'flex';
+    D('docInfoText').textContent = S.docName + ' (' + (S.docSize/1024).toFixed(0) + ' KB)';
+    D('docCharCount').textContent = '共 ' + S.docText.length.toLocaleString() + ' 字符';
+    D('extractSection').style.display = 'block';
+    D('textPreview').textContent = S.docText.slice(0, 3000) + (S.docText.length > 3000 ? '\n\n... [已截断]' : '');
+    if (S.step1Done) {
+      D('step1Result').style.display = 'block';
+      D('step1Output').innerHTML = renderMarkdown(S.step1Result);
+      D('btnStep1').textContent = '🔄 重新解析';
+      updateTabState(1);
+    }
+    if (S.step2Done) {
+      D('step2Result').style.display = 'block';
+      D('step2Output').innerHTML = renderMarkdown(S.step2Result);
+      D('btnStep2').textContent = '🔄 重新生成';
+      updateTabState(2);
+    }
+    if (S.step3Done) {
+      D('step3Result').style.display = 'block';
+      D('step3Output').innerHTML = renderMarkdown(S.step3Result);
+      D('btnStep3').textContent = '🔄 重新生成';
+      updateTabState(3);
+      if (S.outlineSections.length > 0) renderSectionSelector();
+    }
+    if (Object.keys(S.sectionContents).length > 0) {
+      renderStep4Results();
+      updateTabState(4);
+    }
+    updateTokenBar();
+    D('btnExport').disabled = !S.step1Done;
+  }
+
+  // Update tab unlocks
+  if (S.step1Done) { D('step2Locked').style.display = 'none'; D('step2Content').style.display = 'block'; }
+  if (S.step2Done) { D('step3Locked').style.display = 'none'; D('step3Content').style.display = 'block'; }
+  if (S.step3Done) { D('step4Locked').style.display = 'none'; D('step4Content').style.display = 'block'; }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+// Global error display
+window.addEventListener('error', function(e) {
+  if (e.target === window) {
+    D('libError').style.display = 'block';
+    D('libError').innerHTML += '<br>❌ JS错误: ' + e.message + ' (行' + e.lineno + ')';
+    console.error('Global error:', e.message, e.filename, e.lineno);
+  }
+}, true);
+</script>
+</body>
+</html>
