@@ -2075,6 +2075,26 @@ async function verifyCode(code) {
   return { valid: true, version, expiry };
 }
 
+function getFingerprint() {
+  // Generate a stable device fingerprint that persists per browser
+  let fp = localStorage.getItem('bid_fp');
+  if (!fp) {
+    const seed = [navigator.hardwareConcurrency||'', screen.width+'x'+screen.height, navigator.language, Intl.DateTimeFormat().resolvedOptions().timeZone].join('|');
+    fp = 'bid_' + Array.from(new Uint8Array(new TextEncoder().encode(seed))).reduce((a,b)=>(a*31+b)&0xFFFFFFFF,0).toString(36);
+    localStorage.setItem('bid_fp', fp);
+  }
+  return fp;
+}
+
+async function checkDeviceLimit(code) {
+  const WORKER_URL = localStorage.getItem('bid_worker_url') || '';
+  if (!WORKER_URL) return { ok: true, note: '未配置设备限制' };
+  try {
+    const r = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, fingerprint:getFingerprint()}) });
+    return await r.json();
+  } catch(e) { return { ok: true, note: '设备验证服务暂不可用' }; }
+}
+
 function activate() {
   const code = D('actCode').value.trim();
   if (!code) { D('actError').textContent = '请输入激活码'; return; }
@@ -2082,9 +2102,17 @@ function activate() {
   D('actError').textContent = '验证中...';
   D('actError').style.color = '#64748b';
 
-  verifyCode(code).then(result => {
+  verifyCode(code).then(async result => {
     if (!result.valid) {
       D('actError').textContent = result.error;
+      D('actError').style.color = '#ef4444';
+      return;
+    }
+
+    // Check device limit via Worker
+    const devCheck = await checkDeviceLimit(code);
+    if (!devCheck.ok) {
+      D('actError').textContent = devCheck.error || '设备数量超限';
       D('actError').style.color = '#ef4444';
       return;
     }
@@ -2092,7 +2120,9 @@ function activate() {
     const act = {
       version: result.version,
       expiry: result.expiry.toISOString(),
-      code: code
+      code: code,
+      devices: devCheck.devices || 1,
+      maxDevices: devCheck.maxDevices || 99
     };
     localStorage.setItem('bid_activation', JSON.stringify(act));
     window._act = act;
