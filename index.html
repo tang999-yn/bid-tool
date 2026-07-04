@@ -1972,19 +1972,18 @@ function markdownToDocx(md) {
   const lines = md.split('\n');
   const paras = [];
   for (const line of lines) {
-    // Aggressively trim: remove all leading/trailing whitespace and collapse internal spaces
     let txt = line.replace(/[\s　]+/g, ' ').trim();
     if (!txt) continue;
-    // Remove markdown bold markers from headers
     txt = txt.replace(/^\*\*|\*\*$/g, '');
     if (txt.startsWith('# ') || txt.startsWith('## ')) {
+      const level = txt.startsWith('# ')?1:2;
       txt = txt.replace(/^#+ /, '');
       paras.push(new Paragraph({
-        children: [new TextRun({ text: txt, bold: true, size: 24, font: 'SimHei' })],
-        spacing: { before: 200, after: 100 }
+        children: [new TextRun({ text: txt, bold: true, size: level===1?32:28, font: 'SimHei' })],
+        heading: level===1?HeadingLevel.HEADING_1:HeadingLevel.HEADING_2,
+        spacing: { before: level===1?360:240, after: level===1?200:120 }
       }));
     } else {
-      // Handle inline bold: split text by ** markers and create bold/normal runs
       const parts = txt.split(/(\*\*[^*]+\*\*)/g);
       const runs = parts.filter(p => p).map(p => {
         if (p.startsWith('**') && p.endsWith('**')) {
@@ -1994,7 +1993,8 @@ function markdownToDocx(md) {
       });
       paras.push(new Paragraph({
         children: runs,
-        spacing: { line: 360 }
+        spacing: { line: 360, after: 80 },
+        indent: { firstLine: 420 }
       }));
     }
   }
