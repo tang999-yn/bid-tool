@@ -1678,7 +1678,11 @@ function getSectionPrompt(sectionTitle) {
 3. 暗标合规：全文不出现"我司""本公司""我方"等身份词，使用"投标人""承包方""施工单位"；不出现具体人员姓名、公司名称、商标品牌
 4. 得分点覆盖：必须覆盖评分标准中列出的所有得分点
 5. 具体性：避免空洞套话，给出具体的施工方法、技术参数、管理流程、标准规范引用
-6. 数据占位：使用"____"格式标注需要用户填入的实际数据（如工期天数、具体人员数量等）
+6. 数据占位规则（重要）：
+   - 仅项目名称、工期天数、人员数量、报价金额、施工地点 这5类核心数据用"____"标注
+   - 其他内容全部直接写成完整可用段落——施工工艺、质量措施、安全方案、管理制度等全部填充好，用户可以不改直接使用
+   - 正文中通用规范引用（如GB/T、DL/T标准）直接写完整编号和名称
+   - 暗标说明："____"是让用户填入实际数据的位置，填入后不得出现公司名/人名/LOGO/地址
 7. 篇幅：控制在2000-3500字，写出有深度的技术内容
 
 ## 输出格式
@@ -1964,26 +1968,24 @@ async function exportWord() {
 }
 
 function markdownToDocx(md) {
-  // Simplified: convert markdown text to docx paragraphs
   if (!md) return [];
   const lines = md.split('\n');
   const paras = [];
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith('# ')) {
+    // Aggressively trim: remove all leading/trailing whitespace and collapse internal spaces
+    let txt = line.replace(/[\s　]+/g, ' ').trim();
+    if (!txt) continue;
+    // Remove markdown bold markers from headers
+    txt = txt.replace(/^\*\*|\*\*$/g, '');
+    if (txt.startsWith('# ') || txt.startsWith('## ')) {
+      txt = txt.replace(/^#+ /, '');
       paras.push(new Paragraph({
-        children: [new TextRun({ text: trimmed.replace(/^#+ /, ''), bold: true, size: 24, font: 'SimHei' })],
+        children: [new TextRun({ text: txt, bold: true, size: 24, font: 'SimHei' })],
         spacing: { before: 200, after: 100 }
-      }));
-    } else if (trimmed.startsWith('## ')) {
-      paras.push(new Paragraph({
-        children: [new TextRun({ text: trimmed.replace(/^##+ /, ''), bold: true, size: 22, font: 'SimHei' })],
-        spacing: { before: 160, after: 80 }
       }));
     } else {
       paras.push(new Paragraph({
-        children: [new TextRun({ text: trimmed, size: 21, font: 'SimSun' })],
+        children: [new TextRun({ text: txt, size: 21, font: 'SimSun' })],
         spacing: { line: 360 }
       }));
     }
