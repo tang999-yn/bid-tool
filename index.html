@@ -1932,7 +1932,7 @@ async function exportWord() {
           for (const line of lines) {
             if (line.trim()) {
               children.push(new Paragraph({
-                children: [new TextRun({ text: line.trim(), size: 21, font: 'SimSun' })],
+                children: [new TextRun({ text: line.trim(), size: 24, font: 'SimSun' })],
                 spacing: { line: 360 }
               }));
             }
@@ -1979,17 +1979,17 @@ function markdownToDocx(md) {
       const level = txt.startsWith('# ')?1:2;
       txt = txt.replace(/^#+ /, '');
       paras.push(new Paragraph({
-        children: [new TextRun({ text: txt, bold: true, size: level===1?32:28, font: 'SimHei' })],
+        children: [new TextRun({ text: txt, bold: true, size: level===1?32:30, font: 'SimHei' })],
         heading: level===1?HeadingLevel.HEADING_1:HeadingLevel.HEADING_2,
-        spacing: { before: level===1?360:240, after: level===1?200:120 }
+        spacing: { before: 120, after: 120 }
       }));
     } else {
       const parts = txt.split(/(\*\*[^*]+\*\*)/g);
       const runs = parts.filter(p => p).map(p => {
         if (p.startsWith('**') && p.endsWith('**')) {
-          return new TextRun({ text: p.slice(2, -2), bold: true, size: 21, font: 'SimSun' });
+          return new TextRun({ text: p.slice(2, -2), bold: true, size: 24, font: 'SimSun' });
         }
-        return new TextRun({ text: p, size: 21, font: 'SimSun' });
+        return new TextRun({ text: p, size: 24, font: 'SimSun' });
       });
       paras.push(new Paragraph({
         children: runs,
