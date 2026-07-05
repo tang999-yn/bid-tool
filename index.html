@@ -2097,7 +2097,7 @@ function getFingerprint() {
 }
 
 async function checkDeviceLimit(code) {
-  const WORKER_URL = localStorage.getItem('bid_worker_url') || '';
+  const WORKER_URL = localStorage.getItem('bid_worker_url') || 'https://bid-auth.544210594.workers.dev';
   if (!WORKER_URL) return { ok: true, note: '未配置设备限制' };
   try {
     const r = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, fingerprint:getFingerprint()}) });
