@@ -1306,16 +1306,6 @@ const STEP1B_SYSTEM = `你是一名建筑工程投标合规专家。基于已经
 
 // STEP1A used as main, STEP1B run as second call in runStep1
 
-============================================
-限制：
-- 严格基于用户提供的文本。未提及的信息标注"招标文件未提及"
-- 绝不缩写、概括、简写任何资质条件
-- 投标有效期、报价要求、评分公式为必选项
-- 只分析建筑工程类招标文件
-- 如果用户上传的不是招标文件，礼貌告知
-- 不提供任何违法违规建议
-- 以上全部内容一次性输出，不截断，不省略`;
-
 async function runStep1() {
   if (!S.docText) { toast('请先上传招标文件', 'warning'); return; }
   if (!D('apiKey').value.trim()) { toast('请先在设置中填写 API Key', 'warning'); D('settingsPanel').style.display='block'; return; }
