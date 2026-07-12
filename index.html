@@ -560,7 +560,9 @@ body {
 // 标书拆解 + 技术标生成器 — 核心 JavaScript
 // ===================================================================
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 // ==================== Library Check ====================
 function checkLibs() {
