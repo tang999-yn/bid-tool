@@ -1286,7 +1286,26 @@ const STEP1A_SYSTEM = `你是一名资深建筑工程投标专员，有10年云�
 
 十五、需要盖章的材料清单（逐项列出，标注盖章类型：公章/法人章/签字）
 ============================================
-以上为步骤一全部内容，一次性完整输出。不截断、不省略。`;
+以上为第一部分(1-11节)，一次性完整输出，不截断不省略。`;
+
+// Step 1 Part 2: sections 11-15
+const STEP1A2_SYSTEM = `补充输出以下模块（基于招标文件原文）：
+
+十二、🔒 暗标合规检查清单（对标云南2026年7月1日暗标评审新规）
+1. 身份隐匿检查（以下任一项出现 = 废标）：封面公司名、正文公司名/简称、LOGO/标识/水印、人员姓名、地址/电话/网址、特有工法/专利名称、特殊标记/底纹、文档属性残留信息、电子文件名含投标人信息
+2. 格式统一检查（格式违规 = 技术标评分零分）：纸张A4白纸70g、宋体标题三号/正文小四/表格五号、禁止加粗倾斜下划线、文字全黑、页边距上2.0-2.5cm其余2.5cm、行距固定值25磅、左对齐首行缩进2字符、段前段后0、禁止页眉页脚、禁止页码、仅限中文标点、标题序号阿拉伯数字分级
+
+十三、投标文件组成要求（按招标文件原文格式逐部分列出）
+- 资格审查文件包含哪些内容
+- 商务投标文件包含哪些内容
+- 技术投标文件包含哪些内容
+- 每部分的装订要求、签字盖章要求
+
+十四、需要准备的材料原件清单（按资格审查+商务+技术三维度分类，逐项列出）
+
+十五、需要盖章的材料清单（逐项列出，标注盖章类型：公章/法人章/签字）`;
+
+// STEP1A = main, STEP1B = compliance
 
 // Step 1B: compliance checklist (separate call to avoid truncation)
 const STEP1B_SYSTEM = `你是一名建筑工程投标合规专家。基于已经解析出的招标文件信息，补充输出以下合规检查内容：
@@ -1322,37 +1341,45 @@ async function runStep1() {
   const text = smartTruncate(S.docText, 80000);
 
   try {
-    // Phase 1: Core parsing (sections 1-15)
-    D('step1Status').innerHTML = '<span class="live"></span> 第1轮：核心解析（15模块）…';
+    // Phase 1: Core parsing (sections 1-11)
+    D('step1Status').innerHTML = '<span class="live"></span> 第1轮：核心解析（1-11）…';
     const result1 = await callWithRetry(
       STEP1A_SYSTEM,
-      '请分析以下招标文件内容，严格按模板逐条提取信息：\n\n' + text,
+      '请分析以下招标文件内容，严格按模板逐条提取信息（1-11节）：\n\n' + text,
       (full) => {
         D('step1Output').innerHTML = renderMarkdown(full);
-        D('step1ProgressBar').style.width = Math.min(45, 5 + full.length / 200) + '%';
+        D('step1ProgressBar').style.width = Math.min(30, 5 + full.length / 300) + '%';
       }
     );
 
-    // Phase 2: Compliance check (sections 16-17)
-    D('step1Status').innerHTML = '<span class="live"></span> 第2轮：合规检查（废标清单+合同条款）…';
+    // Phase 2: Sections 12-15
+    D('step1Status').innerHTML = '<span class="live"></span> 第2轮：暗标+材料清单（12-15）…';
     const result2 = await callWithRetry(
-      STEP1B_SYSTEM,
-      '基于以下招标解析结果，补充输出合规检查内容（十六、十七）：\n\n' + result1.content.slice(-5000),
+      STEP1A2_SYSTEM,
+      '请分析以下招标文件内容，补充输出第12-15节：\n\n' + text.slice(0, 60000),
       (full) => {
         const merged = result1.content + '\n\n' + full;
         D('step1Output').innerHTML = renderMarkdown(merged);
-        D('step1ProgressBar').style.width = Math.min(90, 50 + full.length / 200) + '%';
+        D('step1ProgressBar').style.width = Math.min(60, 35 + full.length / 300) + '%';
       }
     );
 
-    S.step1Result = result1.content + '\n\n' + result2.content;
-    const t1 = result1.usage ? result1.usage.total_tokens : 0;
-    const t2 = result2.usage ? result2.usage.total_tokens : 0;
-    S.step1Tokens = t1 + t2;
+    // Phase 3: Compliance (sections 16-17)
+    D('step1Status').innerHTML = '<span class="live"></span> 第3轮：合规检查…';
+    const result3 = await callWithRetry(
+      STEP1B_SYSTEM,
+      '基于以下解析结果，补充输出合规检查（十六废标清单+十七合同条款）：\n\n' + (result1.content + result2.content).slice(-5000),
+      (full) => {
+        const merged = result1.content + '\n\n' + result2.content + '\n\n' + full;
+        D('step1Output').innerHTML = renderMarkdown(merged);
+        D('step1ProgressBar').style.width = Math.min(90, 65 + full.length / 300) + '%';
+      }
+    );
+
+    S.step1Result = result1.content + '\n\n' + result2.content + '\n\n' + result3.content;
+    S.step1Tokens = (result1.usage?.total_tokens||0)+(result2.usage?.total_tokens||0)+(result3.usage?.total_tokens||0);
     S.step1Done = true;
     S.totalTokens += S.step1Tokens;
-    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP1A_SYSTEM)+estimateTokens(text), estimateTokens(result1.content))
-                 + calcCost(D('modelName').value, estimateTokens(STEP1B_SYSTEM)+estimateTokens(result1.content.slice(-5000)), estimateTokens(result2.content));
 
     D('step1Output').innerHTML = renderMarkdown(S.step1Result);
     D('step1Result').style.display = 'block';
