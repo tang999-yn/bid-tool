@@ -1078,7 +1078,7 @@ function smartTruncate(text, maxTokens) {
 // ===================================================================
 // STEP 1: 招标文件解析
 // ===================================================================
-const STEP1_SYSTEM = `你是一名资深建筑工程投标专员，有10年云南本地投标经验。你的唯一任务：从用户提供的招标文件内容中逐条、完整、不遗漏地提取关键信息。
+const STEP1A_SYSTEM = `你是一名资深建筑工程投标专员，有10年云南本地投标经验。你的唯一任务：从用户提供的招标文件内容中逐条、完整、不遗漏地提取关键信息。
 
 你是信息提取工具，不是顾问。你的唯一任务：从用户发送的招标文件中逐条提取信息，填入以下模板。
 🚫禁止：写建议、写指南、写分析、解释条款含义、教用户怎么做。
@@ -1283,19 +1283,28 @@ const STEP1_SYSTEM = `你是一名资深建筑工程投标专员，有10年云�
 十四、需要准备的材料原件清单（按资格审查+商务+技术三维度分类，逐项列出）
 
 十五、需要盖章的材料清单（逐项列出，标注盖章类型：公章/法人章/签字）
+============================================
+以上为步骤一全部内容，一次性完整输出。不截断、不省略。`;
 
-十五·B、🛡️ 通用废标自查清单（逐条核·每标必查）
-以下通用废标雷区逐条对照招标文件核查——有条款则提取原文，无则标注"本文件无此条款"：
-| 序号 | 废标点 | 对应条款 | 原文 | 命中 |
+// Step 1B: compliance checklist (separate call to avoid truncation)
+const STEP1B_SYSTEM = `你是一名建筑工程投标合规专家。基于已经解析出的招标文件信息，补充输出以下合规检查内容：
+
+十六、🛡️ 通用废标自查清单（逐条核）
+| 序号 | 废标点 | 本文件对应条款 | 原文摘录 | 命中 |
 | 1 | 报价超最高限价 | | | |
 | 2 | 保证金未按时按额提交 | | | |
-| 3 | 投标文件未签字盖章 | | | |
-| 4 | 密封不符/逾期送达/份数不足 | | | |
-| 5 | 实质性偏离/非响应性 | | | |
-| 6 | 串通投标/弄虚作假 | | | |
-| 7 | 拒不澄清确认/异常低价无法证明 | | | |
-| 8 | 资格/业绩/证书不符合要求 | | | |
-注：合同条款（中标后约束）与废标条款（递交时雷区）必须分开标注。
+| 3 | 签字盖章/密封/份数不符 | | | |
+| 4 | 实质性偏离/非响应性 | | | |
+| 5 | 串通投标/弄虚作假 | | | |
+| 6 | 资格/业绩/证书不符合 | | | |
+注：有条款的填原文，找不到写"本文件无此条款"。
+
+十七、合同条款·要点（中标后约束·与废标分开）
+提取合同部分的质量安全惩处条款中中标后生效的约束：
+| 序号 | 约束事项 | 惩处标准 | 违约金/罚款 |
+注：合同条款≠废标条款。废标=递交时出局，合同=中标后受罚。两者独立输出。`;
+
+// STEP1A used as main, STEP1B run as second call in runStep1
 
 ============================================
 限制：
@@ -1321,22 +1330,39 @@ async function runStep1() {
   const text = smartTruncate(S.docText, 80000);
 
   try {
-    const result = await callWithRetry(
-      STEP1_SYSTEM,
+    // Phase 1: Core parsing (sections 1-15)
+    D('step1Status').innerHTML = '<span class="live"></span> 第1轮：核心解析（15模块）…';
+    const result1 = await callWithRetry(
+      STEP1A_SYSTEM,
       '请分析以下招标文件内容，严格按模板逐条提取信息：\n\n' + text,
-      (full, delta) => {
+      (full) => {
         D('step1Output').innerHTML = renderMarkdown(full);
-        D('step1ProgressBar').style.width = Math.min(90, 5 + full.length / 100) + '%';
+        D('step1ProgressBar').style.width = Math.min(45, 5 + full.length / 200) + '%';
       }
     );
 
-    S.step1Result = result.content;
-    S.step1Tokens = result.usage ? result.usage.total_tokens : estimateTokens(STEP1_SYSTEM) + estimateTokens(text) + estimateTokens(result.content);
+    // Phase 2: Compliance check (sections 16-17)
+    D('step1Status').innerHTML = '<span class="live"></span> 第2轮：合规检查（废标清单+合同条款）…';
+    const result2 = await callWithRetry(
+      STEP1B_SYSTEM,
+      '基于以下招标解析结果，补充输出合规检查内容（十六、十七）：\n\n' + result1.content.slice(-5000),
+      (full) => {
+        const merged = result1.content + '\n\n' + full;
+        D('step1Output').innerHTML = renderMarkdown(merged);
+        D('step1ProgressBar').style.width = Math.min(90, 50 + full.length / 200) + '%';
+      }
+    );
+
+    S.step1Result = result1.content + '\n\n' + result2.content;
+    const t1 = result1.usage ? result1.usage.total_tokens : 0;
+    const t2 = result2.usage ? result2.usage.total_tokens : 0;
+    S.step1Tokens = t1 + t2;
     S.step1Done = true;
     S.totalTokens += S.step1Tokens;
-    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP1_SYSTEM) + estimateTokens(text), estimateTokens(result.content));
+    S.totalCost += calcCost(D('modelName').value, estimateTokens(STEP1A_SYSTEM)+estimateTokens(text), estimateTokens(result1.content))
+                 + calcCost(D('modelName').value, estimateTokens(STEP1B_SYSTEM)+estimateTokens(result1.content.slice(-5000)), estimateTokens(result2.content));
 
-    D('step1Output').innerHTML = renderMarkdown(result.content);
+    D('step1Output').innerHTML = renderMarkdown(S.step1Result);
     D('step1Result').style.display = 'block';
     D('step1Progress').style.display = 'none';
     D('btnStep1').disabled = false;
@@ -1345,7 +1371,7 @@ async function runStep1() {
     updateTabState(1);
     saveState();
     setCurrentStep('解析完成');
-    toast('招标文件解析完成！可切换到第2步查看材料清单', 'success');
+    toast('招标文件解析完成！（两轮输出·15模块+废标清单）', 'success');
 
   } catch (err) {
     D('step1Progress').style.display = 'none';
