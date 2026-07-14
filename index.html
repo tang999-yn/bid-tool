@@ -321,6 +321,64 @@ body {
   </div>
 </div>
 
+<!-- Beginner Guide Overlay -->
+<div id="guideOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.85);z-index:100000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)">
+  <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:520px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:3em;margin-bottom:8px">🔑</div>
+      <h2 style="font-size:1.2em;font-weight:700;color:#1e293b;margin-bottom:4px">新手引导 · 获取 API Key</h2>
+      <p style="color:#64748b;font-size:0.83em">AI 功能需要 API Key，就像汽车的油——自己注册一个，<b>充10块能用几百次</b></p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:#2563eb;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">1</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">注册 DeepSeek 账号</div>
+          <div style="color:#64748b;font-size:0.82em">打开 <a href="https://platform.deepseek.com" target="_blank" style="color:#2563eb;font-weight:600">platform.deepseek.com</a>，用手机号注册（1分钟）</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:#2563eb;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">2</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">充值 10 块钱</div>
+          <div style="color:#64748b;font-size:0.82em">点左侧菜单「充值」→ 输入 <b>10 元</b> → 微信/支付宝扫码。10块钱拆几百份标书都够用。</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:#2563eb;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">3</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">创建 API Key</div>
+          <div style="color:#64748b;font-size:0.82em">点左侧菜单「API Keys」→ 点「创建 API Key」→ 复制那串 <code style="background:#f1f5f9;padding:2px 6px;border-radius:3px;font-size:0.9em;color:#2563eb">sk-</code> 开头的密钥</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:#10b981;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0">✓</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">粘贴到工具里</div>
+          <div style="color:#64748b;font-size:0.82em">点右上角「⚙️ 设置」→ 粘贴到 API Key 框 → 点空白处自动保存 → 搞定！</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-top:20px;font-size:0.8em;color:#166534">
+      💡 <b>划重点：</b>Key 只存在你自己的浏览器里，不上传任何服务器。每次 AI 调用扣几分钱，充10块能用很久。跟充话费一样，用完再充。
+    </div>
+
+    <button class="btn btn-p" onclick="D('guideOverlay').style.display='none';D('settingsPanel').style.display='block'" style="width:100%;margin-top:16px;padding:14px;font-size:1em;font-weight:700">
+      🚀 我已拿到 Key，去设置 →
+    </button>
+    <button class="btn" onclick="D('guideOverlay').style.display='none'" style="width:100%;margin-top:8px;padding:10px;font-size:0.85em;color:#64748b">
+      稍后再说
+    </button>
+  </div>
+</div>
+
 <div class="app">
   <!-- Header -->
   <div class="header">
@@ -2136,6 +2194,10 @@ function activate() {
     D('activationOverlay').style.display = 'none';
     updateVersionUI();
     toast('激活成功！' + (result.version === 'pro' ? '专业版' : '基础版') + '，到期: ' + result.expiry.toLocaleDateString('zh-CN'), 'success');
+    // Show beginner guide if no API key configured
+    setTimeout(() => {
+      if (!D('apiKey').value.trim()) { D('guideOverlay').style.display = 'flex'; }
+    }, 800);
   }).catch(err => {
     D('actError').textContent = '验证出错: ' + err.message;
     D('actError').style.color = '#ef4444';
