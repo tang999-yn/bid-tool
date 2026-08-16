@@ -420,7 +420,7 @@ body {
       </div>
       <div class="fc">
         <label>模型名称</label>
-        <input type="text" id="modelName" value="deepseek-chat" onchange="saveSettings()">
+        <input type="text" id="modelName" value="deepseek-v4-pro" onchange="saveSettings()">
       </div>
       <div class="fc">
         <label>温度 (Temperature) <span id="tempLabel">0.3</span></label>
@@ -428,7 +428,7 @@ body {
       </div>
     </div>
     <div class="settings-hint mt-sm">🔒 API Key 仅存储在浏览器 localStorage，发送到您指定的 API 端点，不上传任何第三方服务器。</div>
-    <div class="settings-hint" style="margin-top:4px">💡 推荐使用 DeepSeek：中文理解最好，价格最低（输入 ¥1/百万token，输出 ¥2/百万token），一次标书拆解成本约 ¥0.06。</div>
+    <div class="settings-hint" style="margin-top:4px">💡 默认 DeepSeek V4 Pro（旗舰，性价比最高）：输入 ¥4.5/百万token，输出 ¥13.5/百万token（空闲时段价，高峰 9-12点/14-18点 为 ¥9/¥27）。可在下拉框切换豆包/千问/Kimi 旗舰模型。</div>
   </div>
 
   <!-- Tab Navigation -->
@@ -678,10 +678,10 @@ function saveState() {
 
 // ==================== Settings ====================
 const ENDPOINTS = {
-  deepseek:  { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  doubao:    { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-20240601-xxx' },
-  qwen:      { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
-  kimi:      { url: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-128k' },
+  deepseek:  { url: 'https://api.deepseek.com/v1', model: 'deepseek-v4-pro' },
+  doubao:    { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-2-1-pro' },
+  qwen:      { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen3.8-max' },
+  kimi:      { url: 'https://api.moonshot.cn/v1', model: 'kimi-k3' },
   custom:    { url: '', model: '' }
 };
 
@@ -804,9 +804,12 @@ function estimateTokens(text) {
 }
 
 const PRICING = {
-  'deepseek-chat': { input: 1, output: 2 },    // ¥/1M tokens
-  'moonshot-v1-128k': { input: 12, output: 12 },
-  'qwen-plus': { input: 2, output: 6 },
+  'deepseek-v4-pro': { input: 4.5, output: 13.5 },   // 空闲时段价，高峰9-12点/14-18点 ¥9/¥27
+  'deepseek-v4-flash': { input: 1.5, output: 4.5 },
+  'deepseek-chat': { input: 1.5, output: 4.5 },      // 旧名，现已路由到 v4-flash
+  'doubao-seed-2-1-pro': { input: 6, output: 30 },
+  'qwen3.8-max': { input: 12, output: 36 },
+  'kimi-k3': { input: 20, output: 100 },
   'default': { input: 4, output: 8 }
 };
 
